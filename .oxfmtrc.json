@@ -1,0 +1,3 @@
+{
+  "ignorePatterns": ["docs/**", "PRODUCT.md", "DESIGN.md", "README.md", "*.csv", "bun.lock"]
+}

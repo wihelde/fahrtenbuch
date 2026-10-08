@@ -1,0 +1,14 @@
+# Optional direnv configuration. Copy to .envrc, then run direnv allow.
+# The application also works with its defaults; no credentials are required.
+export HOST=127.0.0.1
+export PORT=3000
+export DATA_DIR="$PWD/data"
+
+# A suitable trip detail can send its endpoints to this routing service.
+# Tests use local fixtures instead of making public routing requests.
+export OSRM_URL=https://routing.openstreetmap.de/routed-car
+export OSRM_TIMEOUT_MS=5000
+
+# Docker Compose uses these variables only on the host.
+export BIND_ADDRESS=127.0.0.1
+export DOCKER_USER="$(id -u):$(id -g)"

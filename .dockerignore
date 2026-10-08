@@ -1,0 +1,11 @@
+# Only application inputs enter the build context, never private exports or data.
+*
+!package.json
+!bun.lock
+!index.html
+!vite.config.ts
+!tsconfig.json
+!src/
+!src/**
+!public/
+!public/**

@@ -1,0 +1,24 @@
+services:
+  fahrtenbuch:
+    build: .
+    user: "${DOCKER_USER:-1000:1000}"
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DATA_DIR: /data
+      OSRM_URL: "${OSRM_URL:-https://routing.openstreetmap.de/routed-car}"
+      OSRM_TIMEOUT_MS: "${OSRM_TIMEOUT_MS:-5000}"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    volumes:
+      - type: bind
+        source: "${DATA_DIR:-./data}"
+        target: /data
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
