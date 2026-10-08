@@ -29,13 +29,20 @@ if [ "$new_commit" = "$old_commit" ]; then
   exit 0
 fi
 
-# Erst bauen: Ein Buildfehler darf die laufende Anwendung nicht stoppen.
-"$compose" build
 install -d -m 0700 "$app_home/backups"
 backup=$(mktemp -d "$app_home/backups/$(date +%Y%m%d-%H%M%S)-XXXXXX")
 rollback_image="fahrtenbuch:before-update-$(basename "$backup")"
 old_image=$(docker inspect --format '{{.Image}}' "$container")
-docker image tag "$old_image" "$rollback_image"
+if docker image inspect "$old_image" > /dev/null 2>&1; then
+  docker image tag "$old_image" "$rollback_image"
+else
+  # Ein früherer Build kann den Image-Verweis des noch laufenden Containers verdrängt haben.
+  echo 'Bisheriges Image fehlt. Sichere den laufenden Container vor dem Build.'
+  docker commit --pause=true "$container" "$rollback_image" > /dev/null
+fi
+# Den Image-Verweis vor dem Build sichern, der denselben Compose-Tag ersetzt.
+# Ein Buildfehler darf die laufende Anwendung nicht stoppen.
+"$compose" build
 printf '%s\n' "$old_commit" > "$backup/version.txt"
 printf '%s\n' "$rollback_image" > "$backup/rollback-image.txt"
 git -C "$repository" archive -o "$backup/source.tar" "$old_commit"

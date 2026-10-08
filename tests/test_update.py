@@ -103,6 +103,57 @@ esac
         self.assertEqual(retry.returncode, 0, retry.stdout + retry.stderr)
         self.assertEqual((self.app / "deployed-commit").read_text().strip(), self.new)
 
+    def test_update_retains_the_running_image_before_the_build_replaces_it(self):
+        compose = self.app / "compose"
+        compose.write_text(compose.read_text().replace(
+            'build) test ! -e "$base/build-fails" ;;',
+            'build) test ! -e "$base/build-fails"; touch "$base/old-image-replaced" ;;',
+        ))
+        self.environment["UPDATE_TEST_INSTALLATION"] = str(self.app)
+        self.executable(self.bin / "docker", '''#!/bin/sh
+set -eu
+case "$1" in
+  inspect) echo fixture-image ;;
+  image)
+    if [ -e "$UPDATE_TEST_INSTALLATION/old-image-replaced" ]; then
+      echo 'Error response from daemon: No such image: fixture-image' >&2
+      exit 1
+    fi
+    echo retain-image >> "$UPDATE_TEST_INSTALLATION/events.txt"
+    ;;
+esac
+''')
+        result = self.run_update()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.app / "deployed-commit").read_text().strip(), self.new)
+        self.assertEqual((self.data / "archive.txt").read_text(), "synthetic trips and corrections\n")
+        events = self.events.read_text().splitlines()
+        self.assertLess(events.index("retain-image"), events.index("build"))
+
+    def test_update_recovers_when_the_running_image_reference_is_already_missing(self):
+        self.environment["UPDATE_TEST_INSTALLATION"] = str(self.app)
+        self.executable(self.bin / "docker", '''#!/bin/sh
+set -eu
+case "$1" in
+  inspect) echo unavailable-image ;;
+  image)
+    echo 'Error response from daemon: No such image: unavailable-image' >&2
+    exit 1
+    ;;
+  commit)
+    echo preserve-running-container >> "$UPDATE_TEST_INSTALLATION/events.txt"
+    echo recovered-image
+    ;;
+esac
+''')
+        result = self.run_update()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        events = self.events.read_text().splitlines()
+        self.assertLess(events.index("preserve-running-container"), events.index("build"))
+        self.assertEqual((self.app / "deployed-commit").read_text().strip(), self.new)
+        backup = next((self.app / "backups").iterdir())
+        self.assertEqual((backup / "data/archive.txt").read_text(), "synthetic trips and corrections\n")
+
     def test_startup_check_retries_when_the_connection_closes_early(self):
         class StartingApplication(socketserver.BaseRequestHandler):
             attempts = 0

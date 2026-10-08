@@ -41,7 +41,9 @@ Check that `scripts/compose.sh` and `scripts/update.sh` exist before replacing e
 fahrtenbuch-update
 ```
 
-The command rejects local source changes and overlapping updates, pulls `main` using a fast-forward, and compares it with the last deployed commit. If both match, it exits without restarting. Otherwise it builds while the old application keeps running, retains the old image, stops the service, and copies the complete archive before starting the new image. Do not import or edit trips during an update.
+The command rejects local source changes and overlapping updates, pulls `main` using a fast-forward, and compares it with the last deployed commit. If both match, it exits without restarting. Otherwise it retains the running image before building, so replacing the Compose image tag cannot remove the rollback version. It builds while the old application keeps running, stops the service, and copies the complete archive before starting the new image. Do not import or edit trips during an update.
+
+If a previous build already removed the running image reference, the command preserves the running container with `docker commit` before building. Docker briefly pauses it while taking that snapshot. Mounted trip data is excluded from the image and is still backed up separately after the service stops.
 
 A build failure leaves the running application untouched, and the same command can retry. A backup failure attempts to restart the existing service. If startup or the HTTP check fails, the command reports the backup directory and leaves `deployed-commit` unchanged. It does not automatically restore an old database because startup may already have applied migrations.
 

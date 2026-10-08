@@ -36,7 +36,7 @@ The Linux update command has separate CLI tests, run as root with Python 3 and G
 python3 tests/test_update.py
 ```
 
-These use temporary synthetic installations and do not require Docker or actual trip data. They cover a successful update, a build failure and retry, and a temporarily unavailable application during startup. See [operations.md](operations.md#update-command-for-a-linux-host) for the installation layout and other required Linux tools. They are not part of `bun run check`, which also runs on macOS.
+These use temporary synthetic installations and do not require Docker or actual trip data. They cover a successful update, a build failure and retry, image preservation before a build, recovery of a missing running image, and a temporarily unavailable application during startup. See [operations.md](operations.md#update-command-for-a-linux-host) for the installation layout and other required Linux tools. They are not part of `bun run check`, which also runs on macOS.
 
 For a new behavior or bug fix, first reproduce it with a failing behavior test, implement the smallest change that passes, then move to the next case. Prefer API tests for import, persistence, corrections, filters, and summaries. Use a small number of browser checks for interactions and rendering that API tests cannot establish. Avoid tests that merely duplicate implementation details or assert third-party library behavior.
 
