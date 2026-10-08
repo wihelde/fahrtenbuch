@@ -37,3 +37,7 @@ All archive data lives in `./data`, outside the container. Keep this directory w
 Imported values are retained, including missing or unusual values. Corrections are stored separately. Average consumption is weighted by distance, with coverage shown for missing values. Calculated suggestions require explicit confirmation.
 
 Maps load OpenStreetMap tiles. Opening a suitable trip can send its start and destination coordinates to the configured routing service. Reconstructed routes are estimates, not recorded GPS tracks.
+
+## License
+
+You may use and modify Fahrtenbuch for your own private or business trips. Versions shared with others must be free of charge and include access to their source code under the same terms. Selling the software, charging for access or hosting, and incorporating it into paid products or services are prohibited. See [LICENSE](LICENSE) for the full terms.

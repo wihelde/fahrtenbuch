@@ -1,0 +1,40 @@
+Fahrtenbuch License 1.0
+
+Copyright (c) 2026 Martin Behrendt
+
+Permission is granted to use, copy, and modify Fahrtenbuch for personal use
+and internal business use, subject to the following conditions.
+
+1. Free sharing and source code
+
+You may distribute original or modified versions, or provide others with
+access to a hosted version, free of charge. You must give recipients or users
+access to the complete corresponding source code of that version, including
+the instructions and scripts needed to build and run it, free of charge and
+under this same license. This requirement covers the software, not personal
+trip data or credentials.
+
+Keep this license and copyright notices with every copy, and clearly identify
+versions you have modified. You may not impose additional restrictions on the
+rights granted to recipients by this license. Changes used only by yourself
+do not have to be published.
+
+2. No commercial exploitation
+
+You may not sell or rent Fahrtenbuch or modified versions, charge for access
+to them, offer them as paid hosting or subscription services, or monetize
+their use through advertising. You may not incorporate Fahrtenbuch code into
+products or services offered to others for payment. These restrictions apply
+to both original and modified versions. Using Fahrtenbuch to manage your own
+private or business trips is expressly permitted.
+
+3. Third-party components
+
+These terms apply to Fahrtenbuch's own project files. Third-party components
+remain subject to their respective licenses and notices.
+
+4. Warranty and liability
+
+To the extent permitted by applicable law, the software is provided as is,
+without warranty, and the copyright holders are not liable for damages
+arising from its use.

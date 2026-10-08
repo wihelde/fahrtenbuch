@@ -1,6 +1,7 @@
 {
   "name": "fahrtenbuch",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
     "dev": "bun scripts/dev.ts",
