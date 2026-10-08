@@ -30,6 +30,14 @@ bun run check
 
 This checks TypeScript, Oxlint, Oxfmt, API integration tests, and the production build. Tests launch real Bun servers with temporary SQLite archives and synthetic inputs. They verify behavior through HTTP, including byte-identical original downloads, rather than reading internal tables. Routing tests use controlled local HTTP responses.
 
+The Linux update command has separate CLI tests, run as root with Python 3 and Git:
+
+```sh
+python3 tests/test_update.py
+```
+
+These use temporary synthetic installations and do not require Docker or actual trip data. They cover a successful update, a build failure and retry, and a temporarily unavailable application during startup. See [operations.md](operations.md#update-command-for-a-linux-host) for the installation layout and other required Linux tools. They are not part of `bun run check`, which also runs on macOS.
+
 For a new behavior or bug fix, first reproduce it with a failing behavior test, implement the smallest change that passes, then move to the next case. Prefer API tests for import, persistence, corrections, filters, and summaries. Use a small number of browser checks for interactions and rendering that API tests cannot establish. Avoid tests that merely duplicate implementation details or assert third-party library behavior.
 
 ## Focused browser checks
@@ -62,7 +70,7 @@ Open [localhost:4399](http://localhost:4399), import `examples/demo-trips.csv`, 
 - `src/server.ts`: public HTTP interface and built frontend delivery.
 - `src/analysis.ts`, `src/periods.ts`, `src/geography.ts`: summaries, comparison periods, and proximity matching.
 - `src/*.tsx`, `src/style.css`, `public/appearance.js`: responsive interface and appearance initialization.
-- `tests/`: HTTP integration tests.
+- `tests/`: HTTP integration tests and the isolated Linux update command tests.
 - `examples/demo-trips.csv`: synthetic input suitable for demonstrations.
 
 ## Documentation and publication

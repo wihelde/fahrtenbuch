@@ -2,6 +2,61 @@
 
 Run these commands on the Docker host, in the repository directory, with the same configuration and Compose project name used at startup. If you use `docker compose -p NAME`, include that option throughout.
 
+## Update command for a Linux host
+
+The repository includes `scripts/update.sh` and `scripts/compose.sh` for a Linux installation, including a Proxmox LXC. They use the following layout:
+
+```text
+/opt/fahrtenbuch/
+  repository/       clean Git checkout on main
+  .envrc            private host configuration
+  compose           symlink to repository/scripts/compose.sh
+  update            symlink to repository/scripts/update.sh
+  deployed-commit   commit of the last successfully started version
+  backups/          private archives created before updates
+```
+
+The scripts derive the installation directory from their own location. The directory containing the checkout must hold `.envrc` and `deployed-commit`. Run as root with Docker Compose, Git, curl (supporting `--retry-all-errors`), and the standard Linux utilities including `flock` installed. Python 3 is needed only to run the isolated tests.
+
+The private `.envrc` exports the same values used when starting the application: an absolute `DATA_DIR`, `DOCKER_USER`, `BIND_ADDRESS`, and `PORT`, plus any custom routing settings. The wrapper always uses the Compose project name `fahrtenbuch`; use it only for an installation with that name. Data must remain outside the checkout. Do not store configuration, version markers, or backups in Git.
+
+### Connect an existing installation
+
+These commands assume the application already runs from `/opt/fahrtenbuch/repository`, with its configuration in `/opt/fahrtenbuch/.envrc` and an accurate `/opt/fahrtenbuch/deployed-commit`. Keep the original configuration and archive. After publishing the scripts to `main`, run as root:
+
+```sh
+cd /opt/fahrtenbuch/repository
+git pull --ff-only
+ln -sfn /opt/fahrtenbuch/repository/scripts/compose.sh /opt/fahrtenbuch/compose
+ln -sfn /opt/fahrtenbuch/repository/scripts/update.sh /opt/fahrtenbuch/update
+ln -sfn /opt/fahrtenbuch/update /usr/local/bin/fahrtenbuch-update
+fahrtenbuch-update
+```
+
+Check that `scripts/compose.sh` and `scripts/update.sh` exist before replacing existing commands. For a fresh installation, create the layout and private configuration, start the chosen version with `/opt/fahrtenbuch/compose up -d --build`, and verify it before recording its commit with `git rev-parse HEAD > /opt/fahrtenbuch/deployed-commit`. Never mark an unverified checkout as deployed.
+
+### Apply future updates
+
+```sh
+fahrtenbuch-update
+```
+
+The command rejects local source changes and overlapping updates, pulls `main` using a fast-forward, and compares it with the last deployed commit. If both match, it exits without restarting. Otherwise it builds while the old application keeps running, retains the old image, stops the service, and copies the complete archive before starting the new image. Do not import or edit trips during an update.
+
+A build failure leaves the running application untouched, and the same command can retry. A backup failure attempts to restart the existing service. If startup or the HTTP check fails, the command reports the backup directory and leaves `deployed-commit` unchanged. It does not automatically restore an old database because startup may already have applied migrations.
+
+Each backup contains `data/`, `version.txt`, the previous source in `source.tar`, private configuration, copies of the update commands, and `rollback-image.txt`. To restore, use the preserved source and image together with a copy of that backup's complete `data/` in a new directory. The manual instructions below cover the same restore principles but use a separate backup format; do not assume their `image-name.txt` exists in a command-generated backup.
+
+The commands are symlinks into the repository, so subsequent updates also receive changes to the scripts. Host configuration, data, and version markers remain private. Backups and retained images stay on the host until explicitly removed; copy backups to a separate device.
+
+Run the command tests as root on Linux from the repository directory:
+
+```sh
+python3 tests/test_update.py
+```
+
+They use temporary Git repositories, synthetic archives, and command fixtures. The startup retry test uses a temporary local HTTP server and real curl. They do not access the deployed application or actual trip data.
+
 ## What to preserve
 
 Back up the entire host `DATA_DIR`: SQLite and any WAL/sidecar files, original exports, corrections, and cached routes. Stop the application cleanly before copying. Copying only a live SQLite database file is insufficient.
