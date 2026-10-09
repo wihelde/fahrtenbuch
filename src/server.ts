@@ -2,11 +2,21 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { ImportConflictError, openArchive } from "./archive";
 import { CsvImportError } from "./csv";
-import { filtersSchema, analysisFiltersSchema, correctionPatchSchema } from "./model";
+import {
+  filtersSchema,
+  analysisFiltersSchema,
+  correctionPatchSchema,
+  clockQuerySchema,
+} from "./model";
+import { createTripClock } from "./trip-clock";
 import { analyze, compare } from "./analysis";
 import { comparisonRange } from "./periods";
 import { createRouting } from "./routing";
 
+// A TLS proxy changes the upstream URL; trust its configured public origin as well.
+const appOrigin = process.env.APP_ORIGIN
+  ? new URL(z.url({ protocol: /^https?$/ }).parse(process.env.APP_ORIGIN)).origin
+  : undefined;
 const archive = openArchive(resolve(process.env.DATA_DIR ?? "data"));
 const routing = createRouting(archive);
 const frontend = resolve("dist");
@@ -16,6 +26,10 @@ const server = Bun.serve({
   maxRequestBodySize: 10 * 1024 * 1024,
   async fetch(request) {
     const url = new URL(request.url);
+    const origin = request.headers.get("origin");
+    const site = request.headers.get("sec-fetch-site");
+    const foreignRequest =
+      (origin !== null && origin !== url.origin && origin !== appOrigin) || site === "cross-site";
     if (url.pathname === "/api/imports" && request.method === "GET") {
       return Response.json(
         { imports: archive.imports() },
@@ -67,9 +81,7 @@ const server = Bun.serve({
     }
     const routeMatch = url.pathname.match(/^\/api\/trips\/(\d+)\/route$/);
     if (routeMatch && request.method === "GET") {
-      const origin = request.headers.get("origin");
-      const site = request.headers.get("sec-fetch-site");
-      if ((origin && origin !== url.origin) || site === "cross-site" || site === "same-site") {
+      if (foreignRequest || site === "same-site") {
         return Response.json(
           { error: "Route bitte direkt in der Anwendung öffnen." },
           { status: 403 },
@@ -83,18 +95,20 @@ const server = Bun.serve({
     }
     const tripMatch = url.pathname.match(/^\/api\/trips\/(\d+)$/);
     if (tripMatch && request.method === "GET") {
+      const clock = clockQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+      if (!clock.success)
+        return Response.json({ error: "Bitte eine gültige Zeitzone wählen." }, { status: 400 });
       const detail = archive.trip(Number(tripMatch[1]));
       return detail
-        ? Response.json(detail, { headers: { "Cache-Control": "no-store" } })
+        ? Response.json(
+            { ...detail, trip: createTripClock(clock.data.timeZone)(detail.trip) },
+            { headers: { "Cache-Control": "no-store" } },
+          )
         : Response.json({ error: "Fahrt nicht gefunden." }, { status: 404 });
     }
     const correction = url.pathname.match(/^\/api\/trips\/(\d+)\/corrections$/);
     if (correction && request.method === "PATCH") {
-      const origin = request.headers.get("origin");
-      if (
-        (origin && origin !== url.origin) ||
-        request.headers.get("sec-fetch-site") === "cross-site"
-      )
+      if (foreignRequest)
         return Response.json(
           { error: "Korrektur bitte direkt in der Anwendung speichern." },
           { status: 403 },
@@ -110,11 +124,7 @@ const server = Bun.serve({
     }
     const confirmation = url.pathname.match(/^\/api\/imports\/([a-f0-9-]{36})\/confirm$/);
     if ((url.pathname === "/api/imports" || confirmation) && request.method === "POST") {
-      const origin = request.headers.get("origin");
-      if (
-        (origin && origin !== url.origin) ||
-        request.headers.get("sec-fetch-site") === "cross-site"
-      ) {
+      if (foreignRequest) {
         return Response.json(
           { error: "Import bitte direkt in der Anwendung starten." },
           { status: 403 },

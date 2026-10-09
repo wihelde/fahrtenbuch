@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { endpointDistanceMeters } from "./geography";
+import { createTripClock } from "./trip-clock";
 import { CsvImportError, readTrips } from "./csv";
 import {
   tripValuesSchema,
@@ -256,14 +257,17 @@ export function openArchive(directory: string) {
         FROM trips WHERE (? IS NULL OR date >= ?) AND (? IS NULL OR date <= ?)
         AND (? IS NULL OR COALESCE(categoryOverride, category) = ?) ORDER BY date DESC, startTime DESC, id DESC`)
         .all(
-          filters.from ?? null,
-          filters.from ?? null,
-          filters.to ?? null,
-          filters.to ?? null,
+          filters.timeZone ? null : (filters.from ?? null),
+          filters.timeZone ? null : (filters.from ?? null),
+          filters.timeZone ? null : (filters.to ?? null),
+          filters.timeZone ? null : (filters.to ?? null),
           filters.category ?? null,
           filters.category ?? null,
         )
+        .map(createTripClock(filters.timeZone))
         .filter((trip) => {
+          if ((filters.from && trip.date < filters.from) || (filters.to && trip.date > filters.to))
+            return false;
           if (
             filters.missing &&
             (filters.missing === "any"

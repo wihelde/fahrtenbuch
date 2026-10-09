@@ -4,6 +4,9 @@ export HOST=127.0.0.1
 export PORT=3000
 export DATA_DIR="$PWD/data"
 
+# Set the browser-facing address when using an HTTPS reverse proxy.
+# export APP_ORIGIN=https://fahrtenbuch.example.com
+
 # A suitable trip detail can send its endpoints to this routing service.
 # Tests use local fixtures instead of making public routing requests.
 export OSRM_URL=https://routing.openstreetmap.de/routed-car

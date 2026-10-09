@@ -13,9 +13,15 @@ let processHandle: ChildProcess;
 let base: string;
 
 // Run the real Bun server; Vitest observes only its public HTTP interface.
-async function start() {
+async function start(appOrigin?: string) {
   processHandle = spawn("bun", ["src/server.ts"], {
-    env: { ...process.env, PORT: "0", DATA_DIR: directory, HOST: "127.0.0.1" },
+    env: {
+      ...process.env,
+      PORT: "0",
+      DATA_DIR: directory,
+      HOST: "127.0.0.1",
+      APP_ORIGIN: appOrigin ?? "",
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const port = await new Promise<number>((resolve, reject) => {
@@ -129,4 +135,88 @@ test("a different website cannot submit an import to the private archive", async
   });
   expect(response.status).toBe(403);
   expect(await fetch(`${base}/api/trips`).then((r) => r.json())).toEqual({ trips: [] });
+});
+
+test("imports work through the configured HTTPS origin when a proxy uses HTTP upstream", async () => {
+  await stop();
+  await start("https://fahrtenbuch.example");
+  const form = new FormData();
+  form.set("file", new File([csv], "fahrten.csv"));
+  const response = await fetch(`${base}/api/imports`, {
+    method: "POST",
+    body: form,
+    headers: {
+      Host: "fahrtenbuch.example",
+      Origin: "https://fahrtenbuch.example",
+      "X-Forwarded-Proto": "https",
+      "X-Forwarded-Host": "fahrtenbuch.example",
+      "Sec-Fetch-Site": "same-origin",
+    },
+  });
+  expect(response.status).toBe(201);
+  const directForm = new FormData();
+  directForm.set("file", new File([csv], "fahrten.csv"));
+  const direct = await fetch(`${base}/api/imports`, {
+    method: "POST",
+    body: directForm,
+    headers: { Origin: base, "Sec-Fetch-Site": "same-origin" },
+  });
+  expect(direct.status).toBe(201);
+  expect((await fetch(`${base}/api/trips`).then((r) => r.json())).trips).toHaveLength(2);
+});
+
+test("proxy headers cannot allow a foreign origin or a cross-site import", async () => {
+  await stop();
+  await start("https://fahrtenbuch.example");
+  for (const headers of [
+    { Origin: "https://other.example", "Sec-Fetch-Site": "same-origin" },
+    { Origin: "https://fahrtenbuch.example", "Sec-Fetch-Site": "cross-site" },
+    { Origin: "null", "Sec-Fetch-Site": "same-origin" },
+  ]) {
+    const form = new FormData();
+    form.set("file", new File([csv], "fahrten.csv"));
+    const response = await fetch(`${base}/api/imports`, {
+      method: "POST",
+      body: form,
+      headers: {
+        ...headers,
+        Host: "fahrtenbuch.example",
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-Host": "other.example",
+      },
+    });
+    expect(response.status).toBe(403);
+  }
+  expect(await fetch(`${base}/api/trips`).then((r) => r.json())).toEqual({ trips: [] });
+});
+
+test("reimports and manual corrections work through the configured proxy origin", async () => {
+  await upload();
+  await stop();
+  await start("https://fahrtenbuch.example");
+  const headers = {
+    Origin: "https://fahrtenbuch.example",
+    "Sec-Fetch-Site": "same-origin",
+  };
+  const revised = csv.replace(";7.21;Geschäftlich", ";8.00;Geschäftlich");
+  const form = new FormData();
+  form.set("file", new File([revised], "fahrten.csv"));
+  const response = await fetch(`${base}/api/imports`, { method: "POST", body: form, headers });
+  expect(response.status).toBe(202);
+  const preview = await response.json();
+  const confirmed = await fetch(`${base}/api/imports/${preview.token}/confirm`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ applyChanges: true }),
+  });
+  expect(confirmed.status).toBe(201);
+  const [trip] = (await fetch(`${base}/api/trips`).then((r) => r.json())).trips;
+  expect(trip.cost).toBe(8);
+  const corrected = await fetch(`${base}/api/trips/${trip.id}/corrections`, {
+    method: "PATCH",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ cost: { value: 9 } }),
+  });
+  expect(corrected.status).toBe(200);
+  expect(await corrected.json()).toMatchObject({ trip: { cost: 9 }, base: { cost: 8 } });
 });

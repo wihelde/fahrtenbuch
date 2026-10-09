@@ -123,6 +123,40 @@ test("consumption alone leaves cost unchanged and calculated cost is adopted onl
   expect(result.base.cost).toBe(7.21);
 });
 
+test("an identical or extended export preserves saved calculated and manual corrections after restart", async () => {
+  await upload();
+  const before = (await fetch(`${base}/api/trips`).then((r) => r.json())).trips;
+  const missing = before[1].id;
+  const manual = before[0].id;
+  const adopted = await correct(missing, { consumption: { calculated: true } });
+  expect(adopted.status).toBe(200);
+  const calculated = await adopted.json();
+  expect(calculated.trip.consumption).toBeCloseTo(33.9321357285, 9);
+  expect(
+    (
+      await correct(manual, {
+        category: { value: "Freizeit" },
+        consumption: { value: 5.25 },
+        cost: { value: 4.3 },
+      })
+    ).status,
+  ).toBe(200);
+  const savedManual = await fetch(`${base}/api/trips/${manual}`).then((r) => r.json());
+  const duplicate = await upload();
+  expect(duplicate.status).toBe(201);
+  expect(await duplicate.json()).toMatchObject({ newCount: 0, changedCount: 0, unchangedCount: 2 });
+  const extra =
+    "20.06.2025;10:00;10:30;0:30;52.1 , 13.1;52.2 , 13.2;20.0;14153;6.0;1.67;2.00;Freizeit\n";
+  const extended = await upload(csv + extra);
+  expect(extended.status).toBe(201);
+  expect(await extended.json()).toMatchObject({ newCount: 1, changedCount: 0, unchangedCount: 2 });
+  await stop();
+  await start();
+  expect(await fetch(`${base}/api/trips/${missing}`).then((r) => r.json())).toEqual(calculated);
+  expect(await fetch(`${base}/api/trips/${manual}`).then((r) => r.json())).toEqual(savedManual);
+  expect((await fetch(`${base}/api/trips`).then((r) => r.json())).trips).toHaveLength(3);
+});
+
 test("confirmed reimports replace base values but preserve even explicitly missing corrections until reset", async () => {
   const first = await upload().then((r) => r.json());
   const id = (await fetch(`${base}/api/trips`).then((r) => r.json())).trips[0].id;

@@ -19,6 +19,7 @@ import { TripDetail } from "./TripDetail";
 import { Summary } from "./Summary";
 import { Developments } from "./Developments";
 import { ThemeControl } from "./ThemeControl";
+import { TimeControl, readTimeZone } from "./TimeControl";
 import { periodPresets, periodRange, type ComparisonMode } from "./periods";
 
 import { ImportChanges } from "./ImportChanges";
@@ -107,10 +108,15 @@ async function response<T>(result: Response, schema: z.ZodType<T>): Promise<T> {
   return schema.parse(body);
 }
 
-async function readSelection(filters: TripFilters = {}, compare: ComparisonMode | "" = "") {
+async function readSelection(
+  filters: TripFilters = {},
+  compare: ComparisonMode | "" = "",
+  timeZone?: string,
+) {
   const query = new URLSearchParams(
     Object.entries(filters).map(([key, value]) => [key, String(value)]),
   );
+  if (timeZone) query.set("timeZone", timeZone);
   const [archive, analysis] = await Promise.all([
     fetch(`/api/trips?${query}`).then((r) => response(r, archiveSchema)),
     fetch(`/api/analysis?${query}${compare ? `&compare=${compare}` : ""}`).then((r) =>
@@ -120,9 +126,9 @@ async function readSelection(filters: TripFilters = {}, compare: ComparisonMode 
   return { trips: archive.trips, analysis };
 }
 
-async function readArchive() {
+async function readArchive(timeZone?: string) {
   const [selection, history] = await Promise.all([
-    readSelection(),
+    readSelection({}, "", timeZone),
     fetch("/api/imports").then((r) => response(r, historySchema)),
   ]);
   return { ...selection, imports: history.imports };
@@ -135,11 +141,16 @@ function Values({ trip }: { trip: Trip }) {
       "Ankunft",
       <>
         {trip.arrivalTime}
-        {trip.arrivalTime < trip.startTime && (
-          <span className="overnight" title="Über Mitternacht. Datum laut Export.">
-            {" "}
-            ↗<span className="sr-only"> über Mitternacht</span>
-          </span>
+        {trip.arrivalDate && trip.arrivalDate !== trip.date ? (
+          <span className="overnight"> · {dateFormat.format(date(trip.arrivalDate))}</span>
+        ) : (
+          !trip.arrivalDate &&
+          trip.arrivalTime < trip.startTime && (
+            <span className="overnight" title="Über Mitternacht. Datum laut Export.">
+              {" "}
+              ↗<span className="sr-only"> über Mitternacht</span>
+            </span>
+          )
         )}
       </>,
     ],
@@ -164,6 +175,7 @@ function Values({ trip }: { trip: Trip }) {
 }
 
 export function App() {
+  const [timeZone, setTimeZone] = useState(readTimeZone);
   const [archive, setArchive] = useState<{ trips: Trip[]; imports: Import[] }>({
     trips: [],
     imports: [],
@@ -198,9 +210,9 @@ export function App() {
     setLoading(true);
     setError(null);
     try {
-      const loaded = await readArchive();
+      const loaded = await readArchive(timeZone);
       const filtering = Object.keys(filters).length > 0;
-      const selection = filtering ? await readSelection(filters, comparison) : loaded;
+      const selection = filtering ? await readSelection(filters, comparison, timeZone) : loaded;
       setFilteredTrips(filtering ? selection.trips : null);
       setAnalysis(selection.analysis);
       setArchive(loaded);
@@ -220,6 +232,25 @@ export function App() {
       void reload();
     }
   }, []);
+
+  async function changeTimeZone(next?: string) {
+    setLoading(true);
+    try {
+      const loaded = await readArchive(next);
+      const selection = await readSelection(filters, comparison, next);
+      setArchive(loaded);
+      setFilteredTrips(selection.trips);
+      setAnalysis(selection.analysis);
+      setTimeZone(next);
+      setPage(0);
+      setError(null);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function importFile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -301,7 +332,7 @@ export function App() {
             ...spatialDraft,
           });
       const mode = !next.from || !next.to ? "" : (choice?.comparison ?? comparison);
-      const filtered = await readSelection(next, mode);
+      const filtered = await readSelection(next, mode, timeZone);
       setFilteredTrips(filtered.trips);
       setAnalysis(filtered.analysis);
       setFilters(next);
@@ -326,8 +357,10 @@ export function App() {
   const trips = filteredTrips ?? archive.trips;
   // Sort the entire selection before pagination; absent values stay last in either direction.
   const sortedTrips = [...trips].sort((a, b) => {
-    const left = sort.field === "date" ? `${a.date} ${a.startTime}` : a[sort.field];
-    const right = sort.field === "date" ? `${b.date} ${b.startTime}` : b[sort.field];
+    const left =
+      sort.field === "date" ? (a.startInstant ?? `${a.date} ${a.startTime}`) : a[sort.field];
+    const right =
+      sort.field === "date" ? (b.startInstant ?? `${b.date} ${b.startTime}`) : b[sort.field];
     if (left === null && right !== null) return 1;
     if (right === null && left !== null) return -1;
     const difference =
@@ -335,7 +368,9 @@ export function App() {
         ? left - right
         : String(left ?? "").localeCompare(String(right ?? ""), "de");
     const chronological =
-      b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime) || b.id - a.id;
+      (b.startInstant ?? `${b.date} ${b.startTime}`).localeCompare(
+        a.startInstant ?? `${a.date} ${a.startTime}`,
+      ) || b.id - a.id;
     return difference * (sort.direction === "asc" ? 1 : -1) || chronological;
   });
   const rows = sortedTrips.slice(page * pageSize, (page + 1) * pageSize);
@@ -364,6 +399,11 @@ export function App() {
           Fahrtenbuch
         </a>
         <div className="header-actions">
+          <TimeControl
+            timeZone={timeZone}
+            disabled={uploading || loading || filterLoading || Boolean(preview)}
+            onChange={changeTimeZone}
+          />
           <ThemeControl />
           {!empty && (
             <button
@@ -677,7 +717,10 @@ export function App() {
                     {dateFormat.format(date(analysis.comparison.to))}
                   </p>
                 )}
-                <Developments analysis={analysis} selectionScope={JSON.stringify(filters)} />
+                <Developments
+                  analysis={analysis}
+                  selectionScope={JSON.stringify({ ...filters, timeZone })}
+                />
               </>
             )}
             <div className="list-heading">
@@ -727,7 +770,10 @@ export function App() {
                 <div className="desktop-table">
                   <table>
                     <caption className="sr-only">
-                      Importierte Fahrten, {sortLabel}. Datum und Dauer laut Export.
+                      Importierte Fahrten, {sortLabel}.{" "}
+                      {timeZone
+                        ? `Datum und Uhrzeiten: ${timeZone}. Dauer laut Export.`
+                        : "Datum und Dauer laut Export."}
                     </caption>
                     <thead>
                       <tr>
@@ -783,14 +829,22 @@ export function App() {
                           <td>{trip.startTime}</td>
                           <td>
                             {trip.arrivalTime}
-                            {trip.arrivalTime < trip.startTime && (
-                              <span
-                                className="overnight"
-                                title="Über Mitternacht. Datum laut Export."
-                              >
+                            {trip.arrivalDate && trip.arrivalDate !== trip.date ? (
+                              <span className="overnight">
                                 {" "}
-                                ↗<span className="sr-only"> über Mitternacht</span>
+                                · {dateFormat.format(date(trip.arrivalDate))}
                               </span>
+                            ) : (
+                              !trip.arrivalDate &&
+                              trip.arrivalTime < trip.startTime && (
+                                <span
+                                  className="overnight"
+                                  title="Über Mitternacht. Datum laut Export."
+                                >
+                                  {" "}
+                                  ↗<span className="sr-only"> über Mitternacht</span>
+                                </span>
+                              )
                             )}
                           </td>
                           <td className="numeric">
@@ -921,11 +975,18 @@ export function App() {
             Lokal gespeichert
           </span>
           <span>MyPeugeot · Originaldaten</span>
-          <span>Datum und Dauer laut Export</span>
+          <span>
+            {timeZone ? `Uhrzeiten: ${timeZone} · Export: UTC` : "Datum und Uhrzeiten laut Export"}
+          </span>
         </footer>
       </main>
       {selectedTrip !== null && (
-        <TripDetail onChanged={() => void reload()} id={selectedTrip} onClose={closeDetail} />
+        <TripDetail
+          timeZone={timeZone}
+          onChanged={() => void reload()}
+          id={selectedTrip}
+          onClose={closeDetail}
+        />
       )}
     </div>
   );

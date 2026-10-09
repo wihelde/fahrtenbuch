@@ -33,7 +33,7 @@ let responseDelay: number;
 let externalStatus: number;
 let logs: string;
 
-async function start() {
+async function start(appOrigin?: string) {
   logs = "";
   processHandle = spawn("bun", ["src/server.ts"], {
     env: {
@@ -41,6 +41,7 @@ async function start() {
       PORT: "0",
       DATA_DIR: directory,
       HOST: "127.0.0.1",
+      APP_ORIGIN: appOrigin ?? "",
       OSRM_URL: externalBase,
       OSRM_TIMEOUT_MS: "250",
     },
@@ -291,4 +292,25 @@ test("foreign websites cannot trigger transfer of trip coordinates to the routin
     ).status,
   ).toBe(200);
   expect((await route(999999)).status).toBe(404);
+});
+
+test("the configured HTTPS proxy origin can open a route while foreign origins remain blocked", async () => {
+  await upload();
+  await stop();
+  await start("https://fahrtenbuch.example");
+  const [trip] = await trips();
+  const response = await fetch(`${base}/api/trips/${trip.id}/route`, {
+    headers: { Origin: "https://fahrtenbuch.example", "Sec-Fetch-Site": "same-origin" },
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ status: "ready", distanceKm: 18 });
+  expect(requests).toHaveLength(1);
+  for (const headers of [
+    { Origin: "https://other.example", "Sec-Fetch-Site": "same-origin" },
+    { Origin: "https://fahrtenbuch.example", "Sec-Fetch-Site": "same-site" },
+    { Origin: "https://fahrtenbuch.example", "Sec-Fetch-Site": "cross-site" },
+  ]) {
+    expect((await fetch(`${base}/api/trips/${trip.id}/route`, { headers })).status).toBe(403);
+  }
+  expect(requests).toHaveLength(1);
 });

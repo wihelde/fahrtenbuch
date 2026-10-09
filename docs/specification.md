@@ -54,7 +54,9 @@ Support UTF-8 with or without BOM, UTF-16 with BOM, semicolon/comma/tab delimite
 
 Retain missing consumption, cost, and destination values as missing. Do not reinterpret missing as zero. Readable outliers, including signed consumption and cost, remain visible and participate in calculations until corrected.
 
-The export has no timezone. Use its date for grouping, filtering, and sorting without inventing a UTC timestamp or a different departure day. Preserve exported duration rather than recomputing it from clock times. Indicate journeys crossing midnight without asserting an inferred departure date.
+The export has no timezone. By default, use its date and clock times unchanged for grouping, filtering, and sorting without inventing a UTC timestamp or a different departure day. Preserve exported duration rather than recomputing it from clock times. Indicate journeys crossing midnight without asserting an inferred departure date.
+
+Users can explicitly interpret all export times as UTC and choose a display timezone, initially suggested from the browser. This preference persists in that browser. In this mode, interpret the export date as the departure day and an earlier arrival clock time as the next UTC day. Convert both endpoints with daylight-saving rules. Lists, details, date filters, daily/monthly groups, comparisons, and odometer observations use the resulting local departure dates and times. Chronological ordering must remain correct when clocks move backwards. Show the arrival date when different from the departure date. Keep imported values, original CSVs, trip identities, and saved corrections unchanged; original timestamps remain available in trip details. The UI must identify the active timezone and the UTC interpretation.
 
 ## Research and corrections
 

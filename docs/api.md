@@ -21,12 +21,15 @@ Both trip and analysis endpoints accept:
 
 | Query parameter | Meaning |
 | --- | --- |
-| `from`, `to` | Inclusive export-date boundaries in `YYYY-MM-DD` format. Either can be omitted without comparison. |
+| `from`, `to` | Inclusive departure-date boundaries in `YYYY-MM-DD` format, according to the selected display timezone or unchanged export date. Either can be omitted without comparison. |
 | `category` | `Freizeit` or `Geschäftlich`. |
 | `missing` | `any`, `consumption`, or `cost`. Uses effective values; zero is present. |
+| `timeZone` | Optional IANA display timezone such as `Europe/Berlin`. Explicitly interprets exported times as UTC. Omit to retain unchanged export dates and times. Also accepted by `GET /api/trips/:id`. |
 | `lat`, `lng`, `radiusKm` | Proximity to start or destination. Provide all three together, with a positive radius in kilometers. |
 
 The API returns the whole matching collection, with no server pagination or sorting parameters. The interface sorts and paginates the returned trips. Without filters, the API uses the whole archive.
+
+With `timeZone`, trip responses convert departure and arrival clock times, and include `arrivalDate` and the UTC `startInstant` for chronological sorting during clock changes. The export date is interpreted as the UTC departure day; an earlier arrival clock time belongs to the next UTC day. Date filters, grouping, comparisons, and odometer observations use the displayed local departure date. A trip detail's `base` and `source` retain original dates and times. Corrections and imports use stored identities; their write responses remain unconverted. Invalid timezones return 400.
 
 ```sh
 curl 'http://localhost:3000/api/trips?from=2026-10-01&to=2026-10-31&missing=consumption'
@@ -81,5 +84,7 @@ The trip detail returns `calculatedConsumption` and `calculatedCost` as unrounde
 A ready route contains `status: "ready"`, `distanceKm`, `differenceKm` (routing distance minus imported distance), and GeoJSON `geometry`. Other statuses are `round-trip`, `missing-target`, and `unavailable`.
 
 The route endpoint rejects foreign browser origins with 403, including same-site requests that are not same-origin. Imports and corrections reject foreign `Origin` headers or cross-site browser requests. These checks are not authentication and do not restrict direct non-browser clients. Keep the service on a trusted network.
+
+An HTTPS reverse proxy can use the explicitly configured `APP_ORIGIN` as an additional trusted browser origin. See [reverse proxy configuration](configuration.md#https-reverse-proxy). Unconfigured proxy headers do not grant access.
 
 A cache miss can contact the configured routing provider and disclose the endpoints. See [maps and reconstructed routes](usage.md#maps-and-reconstructed-routes).

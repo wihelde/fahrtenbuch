@@ -13,6 +13,7 @@ The defaults work without a configuration file. You can export variables in your
 | `DATA_DIR` | `data` for Bun, `./data` on the Compose host | Local archive directory. Compose mounts it at `/data` in the container. |
 | `BIND_ADDRESS` | `127.0.0.1` | Compose host address on which the port is published. |
 | `DOCKER_USER` | `1000:1000` | Numeric user and group for the application container. Set this to the owner of the host archive directory. |
+| `APP_ORIGIN` | Unset | Additional trusted browser origin for a reverse proxy, such as `https://fahrtenbuch.example.com`. Use the public address, including its scheme and any non-default port. |
 | `OSRM_URL` | `https://routing.openstreetmap.de/routed-car` | Routing base URL; the server appends `/route/v1/driving/{coordinates}`. |
 | `OSRM_TIMEOUT_MS` | `5000` | Routing request timeout in milliseconds, from 100 to 30000. |
 
@@ -35,6 +36,25 @@ docker compose up -d --build
 Open `http://HOST-IP:3000`. The application has no login or account management. Restrict access to a trusted private network or VPN; do not expose it through an unrestricted public proxy or internet port forwarding.
 
 Choose a stable host address and enable host/guest startup if you run it in a virtual machine or system container.
+
+## HTTPS reverse proxy
+
+When a proxy such as Nginx Proxy Manager serves HTTPS and forwards requests to the application's HTTP port, set the public browser address in your private `.envrc`:
+
+```sh
+export APP_ORIGIN=https://fahrtenbuch.example.com
+```
+
+Load that configuration and recreate the application container to apply it:
+
+```sh
+. ./.envrc
+docker compose up -d --build --force-recreate
+```
+
+For the Linux installation described in [operations.md](operations.md#update-command-for-a-linux-host), edit the installation's `.envrc` beside `repository/` and use its Compose wrapper. After an application update, `fahrtenbuch-update` applies the configuration when it recreates the container. A configuration-only change needs `/opt/fahrtenbuch/compose up -d --no-build --force-recreate`; a restart alone does not reload container environment variables.
+
+The public origin allows imports, reimport confirmations, corrections, and routes through the proxy. Direct access through the application's own address still works. The application does not trust arbitrary `Forwarded` or `X-Forwarded-*` headers for these checks; foreign origins and cross-site browser requests remain blocked. This setting does not enable CORS or authentication. Restrict the proxy to the same trusted network or VPN as direct access.
 
 ## Data directory and ownership
 

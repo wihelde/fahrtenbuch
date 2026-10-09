@@ -63,6 +63,8 @@ They use temporary Git repositories, synthetic archives, and command fixtures. T
 
 Back up the entire host `DATA_DIR`: SQLite and any WAL/sidecar files, original exports, corrections, and cached routes. Stop the application cleanly before copying. Copying only a live SQLite database file is insufficient.
 
+Moving an installation also requires this complete archive. Re-uploading the original CSVs recreates imported values but cannot transfer manual corrections or adopted calculated values, because those are stored separately in SQLite and never written back to the original exports. Use the restore procedure below when moving to a different host.
+
 A bind mount preserves data across container recreation but does not protect against host or disk loss. Keep a private copy on a separate device. Exports and backups contain location data and must not be committed or included in container images.
 
 ## Create a backup

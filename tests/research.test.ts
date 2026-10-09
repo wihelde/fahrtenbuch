@@ -133,3 +133,71 @@ test("trip details retain every original field and its archived source after a r
   });
   expect((await fetch(`${base}/api/trips/999999`)).status).toBe(404);
 });
+
+test("UTC export times display in the chosen zone without changing originals or reimport identity", async () => {
+  const content = `${header}\n08.10.2026;05:56;06:00;0:04;52.0 , 13.0;52.1 , 13.1;1.1;32055;;1.76;0.08;Freizeit\n08.01.2026;05:56;06:00;0:04;52.0 , 13.0;52.1 , 13.1;1.1;31000;6.1;1.76;0.08;Freizeit\n`;
+  await upload(content);
+  const original = await fetch(`${base}/api/trips`).then((r) => r.json());
+  const id = original.trips[0].id;
+  await fetch(`${base}/api/trips/${id}/corrections`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ consumption: { value: 7.5 } }),
+  });
+  const displayed = await fetch(`${base}/api/trips?timeZone=Europe%2FBerlin`).then((r) => r.json());
+  expect(displayed.trips).toMatchObject([
+    { id, date: "2026-10-08", startTime: "07:56", arrivalTime: "08:00", consumption: 7.5 },
+    { date: "2026-01-08", startTime: "06:56", arrivalTime: "07:00" },
+  ]);
+  const detail = await fetch(`${base}/api/trips/${id}?timeZone=Europe%2FBerlin`).then((r) =>
+    r.json(),
+  );
+  expect(detail).toMatchObject({
+    trip: { date: "2026-10-08", startTime: "07:56", durationMinutes: 4 },
+    base: { date: "2026-10-08", startTime: "05:56", arrivalTime: "06:00" },
+    source: { values: { "Uhrzeit des Fahrbeginns": "05:56" } },
+    corrections: { consumption: { value: 7.5 } },
+  });
+  const reimported = await upload(content).then((r) => r.json());
+  expect(reimported).toMatchObject({ newCount: 0, unchangedCount: 2 });
+  expect(await fetch(`${base}/api/trips`).then((r) => r.json())).toMatchObject({
+    trips: [{ id, startTime: "05:56", consumption: 7.5 }, { startTime: "05:56" }],
+  });
+});
+
+test("local dates control filtering and comparison, including midnight and the autumn clock change", async () => {
+  await upload(
+    `${header}\n07.10.2026;23:56;00:00;0:04;52.0 , 13.0;52.1 , 13.1;1;32000;7;1.76;1;Freizeit\n06.10.2026;23:56;00:00;0:04;52.0 , 13.0;52.1 , 13.1;2;31900;7;1.76;2;Freizeit\n25.10.2026;00:55;01:10;0:15;52.0 , 13.0;52.1 , 13.1;3;33000;7;1.76;3;Freizeit\n25.10.2026;01:20;01:30;0:10;52.0 , 13.0;52.1 , 13.1;4;33004;7;1.76;4;Freizeit\n`,
+  );
+  const query = "timeZone=Europe%2FBerlin&from=2026-10-08&to=2026-10-08";
+  const filtered = await fetch(`${base}/api/trips?${query}`).then((r) => r.json());
+  expect(filtered.trips).toMatchObject([
+    { date: "2026-10-08", startTime: "01:56", arrivalTime: "02:00", arrivalDate: "2026-10-08" },
+  ]);
+  const analysis = await fetch(`${base}/api/analysis?${query}&compare=previous`).then((r) =>
+    r.json(),
+  );
+  expect(analysis).toMatchObject({
+    count: 1,
+    distanceKm: 1,
+    days: [{ date: "2026-10-08", distanceKm: 1 }],
+    comparison: { from: "2026-10-07", to: "2026-10-07", distanceKm: 2 },
+  });
+  const autumn = await fetch(`${base}/api/trips?timeZone=Europe%2FBerlin&from=2026-10-25`).then(
+    (r) => r.json(),
+  );
+  expect(autumn.trips).toMatchObject([
+    { startTime: "02:20", odometerKm: 33004 },
+    { startTime: "02:55", arrivalTime: "02:10", arrivalDate: "2026-10-25", odometerKm: 33000 },
+  ]);
+  const odometer = await fetch(
+    `${base}/api/analysis?timeZone=Europe%2FBerlin&from=2026-10-25`,
+  ).then((r) => r.json());
+  expect(odometer.odometer.map((point: { odometerKm: number }) => point.odometerKm)).toEqual([
+    33000, 33004,
+  ]);
+  expect((await fetch(`${base}/api/trips?timeZone=Unknown%2FZone`)).status).toBe(400);
+  expect(
+    (await fetch(`${base}/api/trips/${filtered.trips[0].id}?timeZone=Unknown%2FZone`)).status,
+  ).toBe(400);
+});

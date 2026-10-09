@@ -49,7 +49,9 @@ export function analyze(trips: Trip[]) {
     odometer: [...trips]
       .sort(
         (a, b) =>
-          a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.id - b.id,
+          (a.startInstant ?? `${a.date}T${a.startTime}`).localeCompare(
+            b.startInstant ?? `${b.date}T${b.startTime}`,
+          ) || a.id - b.id,
       )
       .map(({ id, date, startTime, odometerKm }) => ({ id, date, startTime, odometerKm })),
     months: [...months]

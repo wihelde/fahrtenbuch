@@ -17,7 +17,12 @@ export const tripValuesSchema = z.object({
   category: z.enum(["Freizeit", "Geschäftlich"]),
 });
 
-export const tripSchema = tripValuesSchema.extend({ id: z.number().int(), importId: z.string() });
+export const tripSchema = tripValuesSchema.extend({
+  id: z.number().int(),
+  importId: z.string(),
+  arrivalDate: z.iso.date().optional(),
+  startInstant: z.iso.datetime().optional(),
+});
 export const archiveSchema = z.object({ trips: z.array(tripSchema) });
 export const importSchema = z.object({
   id: z.string(),
@@ -31,12 +36,27 @@ export type Import = z.infer<typeof importSchema>;
 
 const filterNumber = z.union([z.number(), z.string().trim().min(1)]).pipe(z.coerce.number());
 
+export const timeZoneSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .refine((timeZone) => {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Bitte eine gültige Zeitzone wählen.");
+export const clockQuerySchema = z.object({ timeZone: timeZoneSchema.optional() });
+
 export const filtersSchema = z
   .object({
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
     category: z.enum(["Freizeit", "Geschäftlich"]).optional(),
     missing: z.enum(["any", "consumption", "cost"]).optional(),
+    timeZone: timeZoneSchema.optional(),
     lat: filterNumber.pipe(z.number().min(-90).max(90)).optional(),
     lng: filterNumber.pipe(z.number().min(-180).max(180)).optional(),
     radiusKm: filterNumber.pipe(z.number().positive()).optional(),

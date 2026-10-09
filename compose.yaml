@@ -6,6 +6,7 @@ services:
       HOST: 0.0.0.0
       PORT: "3000"
       DATA_DIR: /data
+      APP_ORIGIN: "${APP_ORIGIN:-}"
       OSRM_URL: "${OSRM_URL:-https://routing.openstreetmap.de/routed-car}"
       OSRM_TIMEOUT_MS: "${OSRM_TIMEOUT_MS:-5000}"
     ports:

@@ -16,6 +16,10 @@ Use [the synthetic sample](../examples/demo-trips.csv) only in a separate demons
 
 ## Filters and sorting
 
+The clock icon in the header opens **Uhrzeiten**. By default, dates and clock times are displayed exactly as exported. If your CSV uses UTC, choose **UTC in Ortszeit umrechnen** and an **Anzeigezeitzone**, for example `Europe/Berlin`. The suggested zone comes from your browser; the choice is saved in that browser only. The application does not automatically infer a source timezone.
+
+Conversion handles summer/winter time and date changes. It treats the export date as the UTC departure day; an earlier arrival clock time belongs to the next UTC day. Lists, trip details, filters, charts, and comparisons all use the displayed departure date. A different arrival date is shown beside the arrival time. Original dates, times, and duration remain preserved, and **Originalwerte laut CSV** in the trip detail shows the unconverted source. Switching the display mode does not alter corrections or reimport matching.
+
 The initial range ends on today in your browser and starts 30 days earlier. Both dates are inclusive, so this covers 31 calendar dates. Presets include the last 7 or 90 days, this month or year to date, the full previous month or year, and the whole archive.
 
 Date presets, category, missing-value filters, and comparison choices apply immediately. Apply manually entered date boundaries with **Anwenden**.

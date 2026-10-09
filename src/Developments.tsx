@@ -504,7 +504,7 @@ export function Developments({
                     </caption>
                     <thead>
                       <tr>
-                        <th scope="col">Datum laut Export</th>
+                        <th scope="col">Datum</th>
                         <th scope="col">Start</th>
                         <th scope="col">Kilometerstand</th>
                       </tr>

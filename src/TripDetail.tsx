@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { TripCorrections } from "./TripCorrections";
 import { TripMap } from "./TripMap";
 import { tripDetailSchema, type TripDetail as Detail } from "./model";
+import { createTripClock } from "./trip-clock";
 
 const number = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 8 });
 const date = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: "UTC" });
@@ -11,10 +12,12 @@ export function TripDetail({
   id,
   onClose,
   onChanged,
+  timeZone,
 }: {
   id: number;
   onClose: () => void;
   onChanged: () => void;
+  timeZone?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -43,7 +46,8 @@ export function TripDetail({
     const controller = new AbortController();
     setError(null);
     setDetail(null);
-    void fetch(`/api/trips/${id}`, { signal: controller.signal })
+    const query = new URLSearchParams(timeZone ? { timeZone } : {});
+    void fetch(`/api/trips/${id}?${query}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Diese Fahrt konnte nicht geladen werden.");
         return tripDetailSchema.parse(await response.json());
@@ -53,14 +57,20 @@ export function TripDetail({
         if (!controller.signal.aborted) setError("Diese Fahrt ist gerade nicht erreichbar.");
       });
     return () => controller.abort();
-  }, [id, attempt]);
+  }, [id, attempt, timeZone]);
 
   const trip = detail?.trip;
   const values = trip
     ? [
-        ["Datum laut Export", date.format(new Date(`${trip.date}T12:00:00Z`))],
+        [
+          timeZone ? "Startdatum" : "Datum laut Export",
+          date.format(new Date(`${trip.date}T12:00:00Z`)),
+        ],
         ["Startzeit", trip.startTime],
-        ["Ankunftszeit", trip.arrivalTime],
+        [
+          "Ankunftszeit",
+          `${trip.arrivalTime}${trip.arrivalDate && trip.arrivalDate !== trip.date ? ` · ${date.format(new Date(`${trip.arrivalDate}T12:00:00Z`))}` : ""}`,
+        ],
         [
           "Dauer laut Export",
           `${Math.floor(trip.durationMinutes / 60)}:${String(trip.durationMinutes % 60).padStart(2, "0")} h`,
@@ -116,8 +126,9 @@ export function TripDetail({
         <>
           <p className="detail-provenance">
             Quelle: <strong>{detail.source.import.filename}</strong>
+            {timeZone && ` · Uhrzeiten: ${timeZone} (Export: UTC)`}
           </p>
-          {trip.arrivalTime < trip.startTime && (
+          {!trip.arrivalDate && trip.arrivalTime < trip.startTime && (
             <p className="detail-note">
               Über Mitternacht. Datum und Dauer laut Export. Der Starttag ist nicht gesichert.
             </p>
@@ -134,7 +145,7 @@ export function TripDetail({
           <TripCorrections
             detail={detail}
             onSaved={(saved) => {
-              setDetail(saved);
+              setDetail({ ...saved, trip: createTripClock(timeZone)(saved.trip) });
               onChanged();
             }}
           />

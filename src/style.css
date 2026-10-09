@@ -849,6 +849,40 @@ select:focus-visible {
 .trip-dialog::backdrop {
   background: oklch(0.24 0.008 12 / 0.35);
 }
+.time-dialog {
+  width: min(480px, calc(100vw - 40px));
+}
+.time-dialog form {
+  display: grid;
+  gap: 20px;
+}
+.time-dialog label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+.time-dialog input,
+.time-dialog select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--page);
+  font: inherit;
+  font-weight: 400;
+}
+.time-dialog p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.time-dialog [role="alert"] {
+  color: var(--primary-text);
+}
+.time-dialog .button {
+  justify-self: end;
+}
 .detail-header {
   display: flex;
   align-items: flex-start;
