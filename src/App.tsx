@@ -184,6 +184,8 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [draggingFile, setDraggingFile] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [imported, setImported] = useState<ImportResult | null>(null);
@@ -204,6 +206,7 @@ export function App() {
   const [selectedTrip, setSelectedTrip] = useState<number | null>(null);
   const closeDetail = useCallback(() => setSelectedTrip(null), []);
   const fileInput = useRef<HTMLInputElement>(null);
+  const fileDragDepth = useRef(0);
   const firstLoad = useRef(true);
 
   async function reload() {
@@ -547,8 +550,45 @@ export function App() {
               )}
             </div>
             <form onSubmit={(event) => void importFile(event)}>
-              <label className="file-label" htmlFor="csv-file">
-                CSV-Datei
+              <label
+                className={`file-label file-drop-zone ${draggingFile ? "dragging" : ""}`}
+                htmlFor="csv-file"
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  if (uploading || !event.dataTransfer.types.includes("Files")) return;
+                  fileDragDepth.current += 1;
+                  setDraggingFile(true);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = uploading ? "none" : "copy";
+                }}
+                onDragLeave={(event) => {
+                  event.preventDefault();
+                  fileDragDepth.current = Math.max(0, fileDragDepth.current - 1);
+                  if (fileDragDepth.current === 0) setDraggingFile(false);
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  fileDragDepth.current = 0;
+                  setDraggingFile(false);
+                  if (uploading) return;
+                  const files = event.dataTransfer.files;
+                  if (files.length !== 1) {
+                    setFileError("Bitte genau eine CSV-Datei ablegen.");
+                    return;
+                  }
+                  if (!files[0].name.toLowerCase().endsWith(".csv")) {
+                    setFileError("Bitte eine CSV-Datei ablegen.");
+                    return;
+                  }
+                  setFileError(null);
+                  setFile(files[0]);
+                  if (fileInput.current) fileInput.current.files = files;
+                }}
+              >
+                <span>{draggingFile ? "CSV-Datei hier ablegen" : "CSV-Datei hierher ziehen"}</span>
+                <span className="file-drop-hint">oder Datei auswählen</span>
                 <input
                   ref={fileInput}
                   id="csv-file"
@@ -556,14 +596,26 @@ export function App() {
                   type="file"
                   accept=".csv,text/csv"
                   disabled={uploading}
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                  aria-describedby={fileError ? "csv-file-error" : undefined}
+                  onChange={(event) => {
+                    setFileError(null);
+                    setFile(event.target.files?.[0] ?? null);
+                  }}
                 />
+                <span className="sr-only" role="status">
+                  {file ? `${file.name} ausgewählt` : ""}
+                </span>
               </label>
               <button className="button primary" type="submit" disabled={!file || uploading}>
                 <Icon name="upload" />
                 {uploading ? "Wird importiert…" : "Fahrten importieren"}
               </button>
             </form>
+            {fileError && (
+              <p id="csv-file-error" className="file-error" role="alert">
+                {fileError}
+              </p>
+            )}
             <p className="import-note">
               Originalwerte bleiben erhalten. Deine CSV wird unverändert archiviert.
             </p>

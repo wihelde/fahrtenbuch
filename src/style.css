@@ -281,6 +281,27 @@ h1 {
   font-size: 0.77rem;
   font-weight: 550;
 }
+.file-drop-zone {
+  padding: 20px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  background: var(--page);
+  font-size: 0.9rem;
+}
+.file-drop-zone.dragging {
+  border-color: var(--primary-text);
+  background: var(--selected);
+}
+.file-drop-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.file-error {
+  margin-top: 12px;
+  color: var(--primary-text);
+  font-size: 0.85rem;
+}
 input[type="file"] {
   display: block;
   width: 100%;

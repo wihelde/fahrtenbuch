@@ -22,6 +22,7 @@ The current scope is one vehicle, one user, a German interface, and German MyPeu
 
 ## Import and persistence
 
+- Select a CSV through the native file picker or drop one CSV file onto the import area's highlighted drop zone. Show the selected filename and require the import action before uploading. Reject multiple dropped files and non-CSV filenames with an accessible message; disable selection during upload.
 - Retain original files without modifying their bytes and preserve parsed original field strings alongside accepted trips.
 - Treat date, start time, and odometer together as identity. An identical reimport does not add trips. Changing an identity field creates a new trip; there is no fuzzy merge.
 - Show changed imported values for known identities before accepting them. Keeping existing values can still add new trips. Keep corrections across accepted reimports.
