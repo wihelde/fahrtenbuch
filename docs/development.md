@@ -79,4 +79,6 @@ Use [the current specification](specification.md) for product behavior and test 
 
 Do not publish actual exports, archive directories, backups, private environment settings, or historical personal planning notes. `.gitignore` excludes local artifacts from new commits; it does not erase files or information from existing Git history. Check the history before the first public publication.
 
-No CI configuration, dependency-update automation, or public container registry is currently included. The Docker quick start builds the application from this repository.
+GitLab CI runs the checks above on branches, tags, and merge requests using the self-managed runner tagged `home-linux`. The Linux update-command tests run in a separate Python container. All checks use temporary synthetic data.
+
+Renovate proposes dependency updates; automerge is disabled and successful CI is required before merging. Updates do not deploy the application. No public container registry is included; the Docker quick start builds the application from this repository.
