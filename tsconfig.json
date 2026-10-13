@@ -13,5 +13,12 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "tests", "scripts", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "scripts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
 }

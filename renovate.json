@@ -1,4 +1,42 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>wihel_de/renovate"]
+  "extends": ["local>wihel_de/renovate"],
+  "minimumReleaseAge": "21 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "internalChecksFilter": "strict",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.gitlab-ci\\.yml$/"],
+      "matchStrings": ["npm install --global bun@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "bun",
+      "datasourceTemplate": "npm"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Check React, its renderer and their types together.",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "React",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Keep the application runtime, CI runtime and Bun types in one update.",
+      "matchPackageNames": ["oven/bun", "bun", "@types/bun"],
+      "groupName": "Bun",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Check Vite, its React plugin and Vitest for compatibility together.",
+      "matchPackageNames": ["vite", "@vitejs/plugin-react", "vitest"],
+      "groupName": "Vite toolchain",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "Check Leaflet and its type definitions together.",
+      "matchPackageNames": ["leaflet", "@types/leaflet"],
+      "groupName": "Leaflet",
+      "separateMajorMinor": false
+    }
+  ]
 }

@@ -17,6 +17,21 @@ check:
     - bun install --frozen-lockfile
     - bun --bun run check
 
+browser:
+  image: node:24-bookworm-slim
+  script:
+    - npm install --global bun@1.4.2
+    - bun install --frozen-lockfile
+    - bun x playwright install --with-deps chromium
+    - bun run test:e2e
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - test-results/
+    reports:
+      junit: test-results/junit.xml
+
 linux-update:
   image: python:3.14-slim
   script:

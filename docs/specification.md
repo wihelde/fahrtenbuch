@@ -98,4 +98,4 @@ Use public HTTP behavior with temporary SQLite archives for import, reimports, c
 
 ## Outside the current scope
 
-Other CSV schemas, multiple vehicles/users, authentication, actual GPS tracks, searching places passed along a route, geocoding, offline map archives, automatic data cleanup, arbitrary categories, full edit history, and automatic backups are not implemented. Date/time, distance, odometer, price, and coordinates are not manually editable; confirmed reimports can change non-identity imported fields. No dependency-update automation or CI configuration is included.
+Other CSV schemas, multiple vehicles/users, authentication, actual GPS tracks, searching places passed along a route, geocoding, offline map archives, automatic data cleanup, arbitrary categories, full edit history, and automatic backups are not implemented. Date/time, distance, odometer, price, and coordinates are not manually editable; confirmed reimports can change non-identity imported fields. CI checks dependency updates but does not deploy the application.

@@ -30,6 +30,17 @@ bun run check
 
 This checks TypeScript, Oxlint, Oxfmt, API integration tests, and the production build. Tests launch real Bun servers with temporary SQLite archives and synthetic inputs. They verify behavior through HTTP, including byte-identical original downloads, rather than reading internal tables. Routing tests use controlled local HTTP responses.
 
+Run the browser integration tests separately (Node.js 22 or 24 is required for the Playwright runner):
+
+```sh
+bun x playwright install chromium
+bun run test:e2e
+```
+
+`test:e2e` builds the production frontend and checks it in Chromium in desktop and mobile layouts. Each test starts a real Bun server with an empty temporary archive. It covers CSV uploads and original downloads, duplicate and changed reimports with both confirmation choices, combined filters and summaries, sorting across more than one page, saved corrections and reset, and trip details with map endpoints and reconstructed geometry. Uncaught browser errors fail the tests. Routing uses a local HTTP fixture; map tile requests deliberately fail to verify that trips remain usable without the external background. No private archive or live deployment is used.
+
+Failures retain screenshots and Playwright traces in `test-results/`; GitLab also receives a JUnit report. To inspect a trace, run `bun x playwright show-trace test-results/<failed-test>/trace.zip`. The suite has no automatic retries, so a failing first run remains visible.
+
 The Linux update command has separate CLI tests, run as root with Python 3 and Git:
 
 ```sh
@@ -79,6 +90,14 @@ Use [the current specification](specification.md) for product behavior and test 
 
 Do not publish actual exports, archive directories, backups, private environment settings, or historical personal planning notes. `.gitignore` excludes local artifacts from new commits; it does not erase files or information from existing Git history. Check the history before the first public publication.
 
-GitLab CI runs the checks above on branches, tags, and merge requests using the self-managed runner tagged `home-linux`. The Linux update-command tests run in a separate Python container. All checks use temporary synthetic data.
+GitLab CI runs the checks above on branches, tags, and merge requests using the self-managed runner tagged `home-linux`. Browser tests run in a separate Node container with Bun and the Chromium version required by the installed Playwright package. The Linux update-command tests run in a separate Python container. All checks use temporary synthetic data. Run both `bun run check` and `bun run test:e2e` for equivalent local application checks; the Linux updater tests additionally require a Linux environment.
 
 Renovate proposes dependency updates; automerge is disabled and successful CI is required before merging. Updates do not deploy the application. No public container registry is included; the Docker quick start builds the application from this repository.
+
+The repository extends `local>wihel_de/renovate`. The shared preset enables the Dependency Dashboard and defines the open-MR limit; the accompanying preset change raises this limit from three to ten per project. The project requires a release timestamp and a minimum release age of 21 days; updates that cannot establish their age remain pending. This ages each candidate release, not the time since Renovate first noticed it.
+
+Project update groups are React with React DOM and their type packages, Bun images with the Bun CLI installation in CI and Bun types, Vite with its React plugin and Vitest, and Leaflet with its types. Within each group, major and minor updates can share an MR so a major upgrade can include a compatible plugin or type update even if its version numbering differs. A group bundles available updates; it does not require every member to have a new release or force identical version numbers. CI verifies the resulting combination. The Bun CLI version in `.gitlab-ci.yml` is detected by a custom regex manager; Dockerfile and CI image tags use Renovate's built-in managers.
+
+Updates, including major versions, create normal merge requests automatically once eligible. No Dependency Dashboard approval is required; review and merge decisions happen in the MR. The dashboard is an optional overview, not a prerequisite for updates.
+
+Renovate's release-age check does not cover every indirect package resolved while generating `bun.lock`, and some update types such as lockfile maintenance and replacements are not aged. Additional Bun package-manager restrictions, immutable Docker image digests, security-update exceptions and patch automerge are separate policy decisions.

@@ -19,6 +19,8 @@ backup/
 *.csv
 !examples/demo-trips.csv
 coverage/
+test-results/
+playwright-report/
 *.log
 .DS_Store
 *.swp
