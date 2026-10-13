@@ -12,7 +12,7 @@ default:
   timeout: 15m
 
 check:
-  image: oven/bun:1.4.2
+  image: oven/bun:1.4.3
   script:
     - bun install --frozen-lockfile
     - bun --bun run check
@@ -20,7 +20,7 @@ check:
 browser:
   image: node:24-bookworm-slim
   script:
-    - npm install --global bun@1.4.2
+    - npm install --global bun@1.4.3
     - bun install --frozen-lockfile
     - bun x playwright install --with-deps chromium
     - bun run test:e2e
