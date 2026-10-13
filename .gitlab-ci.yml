@@ -12,7 +12,7 @@ default:
   timeout: 15m
 
 check:
-  image: oven/bun:1.4.2
+  image: oven/bun:1.4.3
   script:
     - bun install --frozen-lockfile
     - bun --bun run check
