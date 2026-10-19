@@ -290,7 +290,13 @@ export function openArchive(directory: string) {
               trip.endLng !== null &&
               endpointDistanceMeters(filters.lat, filters.lng, trip.endLat, trip.endLng) <= limit)
           );
-        });
+        })
+        .sort(
+          (a, b) =>
+            (b.startInstant ?? `${b.date}T${b.startTime}`).localeCompare(
+              a.startInstant ?? `${a.date}T${a.startTime}`,
+            ) || b.id - a.id,
+        );
     },
     trip(id: number) {
       const stored = db

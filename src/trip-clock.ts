@@ -1,6 +1,6 @@
 import type { TripValues } from "./model";
 
-/** Convert an explicitly selected UTC export for display, preserving stored identities. */
+/** Interpret local export dates with UTC clocks, preserving stored identities. */
 export function createTripClock(timeZone?: string) {
   const format = timeZone
     ? new Intl.DateTimeFormat("en-CA", {
@@ -25,9 +25,12 @@ export function createTripClock(timeZone?: string) {
   return <T extends TripValues>(trip: T): T & { arrivalDate?: string; startInstant?: string } => {
     if (!format) return trip;
     const start = new Date(`${trip.date}T${trip.startTime}:00Z`);
-    const arrival = new Date(`${trip.date}T${trip.arrivalTime}:00Z`);
-    // In UTC mode the export date is interpreted as the departure day.
-    if (trip.arrivalTime < trip.startTime) arrival.setUTCDate(arrival.getUTCDate() + 1);
+    // MyPeugeot exports the local departure date but UTC clock times.
+    const localDate = clock(start).date;
+    if (localDate !== trip.date)
+      start.setUTCDate(start.getUTCDate() + (localDate > trip.date ? -1 : 1));
+    const arrival = new Date(`${start.toISOString().slice(0, 10)}T${trip.arrivalTime}:00Z`);
+    if (arrival < start) arrival.setUTCDate(arrival.getUTCDate() + 1);
     const displayedStart = clock(start);
     const displayedArrival = clock(arrival);
     return {

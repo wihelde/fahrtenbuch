@@ -137,7 +137,7 @@ export function TimeControl({
           )}
           <p className="muted">
             {utc
-              ? "Sommerzeit, Winterzeit und Datumswechsel werden berücksichtigt. Das Exportdatum gilt als Starttag."
+              ? "Das Exportdatum ist bereits das lokale Startdatum. UTC-Uhrzeiten werden inklusive Sommer- und Winterzeit umgerechnet."
               : "Datum und Uhrzeiten bleiben wie in der CSV."}{" "}
             Originalwerte bleiben erhalten. Gilt für alle Fahrten in diesem Browser.
           </p>

@@ -29,7 +29,7 @@ Both trip and analysis endpoints accept:
 
 The API returns the whole matching collection, with no server pagination or sorting parameters. The interface sorts and paginates the returned trips. Without filters, the API uses the whole archive.
 
-With `timeZone`, trip responses convert departure and arrival clock times, and include `arrivalDate` and the UTC `startInstant` for chronological sorting during clock changes. The export date is interpreted as the UTC departure day; an earlier arrival clock time belongs to the next UTC day. Date filters, grouping, comparisons, and odometer observations use the displayed local departure date. A trip detail's `base` and `source` retain original dates and times. Corrections and imports use stored identities; their write responses remain unconverted. Invalid timezones return 400.
+With `timeZone`, trip responses interpret the export date as the local departure date in the selected timezone and the clock times as UTC. The UTC departure date is chosen so its converted local date matches the export date. Arrival is anchored to that UTC departure date; an earlier arrival clock belongs to the next UTC day. Responses include `arrivalDate` and the UTC `startInstant` for chronological sorting during clock changes. Trip lists sort newest first by that instant. Date filters, grouping, comparisons, and odometer observations use the local departure date. A trip detail's `base` and `source` retain original dates and times. Corrections and imports use stored identities; their write responses remain unconverted. Invalid timezones return 400.
 
 ```sh
 curl 'http://localhost:3000/api/trips?from=2026-10-01&to=2026-10-31&missing=consumption'
