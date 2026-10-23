@@ -137,6 +137,43 @@ test("category and missing-value filters update the list and all summary values 
   await expect(trips).toHaveCount(3);
 });
 
+test("retrying a failed filter change applies the visible selection to trips and summaries", async ({
+  page,
+}) => {
+  await importCsv(page);
+  await expect(page.getByText("3 neue Fahrten · 0 Änderungen übernommen")).toBeVisible();
+  await showAllTrips(page);
+  const category = page.getByRole("combobox", { name: /^Kategorie/ });
+  const trips = page.getByRole("button", { name: /^Fahrt vom/ });
+  const summary = page.getByRole("region", { name: "Kennzahlen der ausgewählten Fahrten" });
+  await category.selectOption("Freizeit");
+  await expect(trips).toHaveCount(2);
+  await page.route("**/api/trips?**", async (route) => {
+    if (new URL(route.request().url()).searchParams.get("category") !== "Geschäftlich") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Die Auswahl ist vorübergehend nicht erreichbar." }),
+    });
+  });
+  await category.selectOption("Geschäftlich");
+  await expect(page.getByRole("alert")).toContainText("vorübergehend nicht erreichbar");
+  await expect(category).toHaveValue("Geschäftlich");
+  await expect(trips).toHaveCount(2);
+  await page.unroute("**/api/trips?**");
+  await page.getByRole("button", { name: "Erneut laden", exact: true }).click();
+  await expect(trips).toHaveCount(1);
+  await expect(trips).toHaveAccessibleName("Fahrt vom 02.01.2024 um 09:00 ansehen");
+  await expect(category).toHaveValue("Geschäftlich");
+  await expect(summary.locator("dd").first()).toHaveText("1");
+  await expect(summary).toContainText("20 km");
+  await expect(page.locator(".filter-status")).toContainText("Geschäftlich");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
 test("chart selections narrow only the table, preserve all filters and let users explore other periods", async ({
   page,
 }) => {
@@ -296,6 +333,9 @@ test("manual date boundaries apply immediately, validate the range, and can be c
   await to.fill("2024-01-02");
   await expect(trips).toHaveCount(1);
   await from.fill("2024-01-03");
+  await expect(page.getByRole("alert")).toContainText("Beginn");
+  await expect(trips).toHaveCount(1);
+  await page.getByRole("button", { name: "Erneut laden", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Beginn");
   await expect(trips).toHaveCount(1);
   await to.fill("2024-01-03");

@@ -36,3 +36,5 @@ For odometer readings, display date, start time, and value together. Include an 
 Place calculated suggestions and save actions next to their fields. Manual edits have a separate save action; adopting a suggestion also saves it. Show success and errors at the field without moving the viewport or losing drafts elsewhere.
 
 Use native file selection and semantic forms, tables, and dialogs. Maintain visible focus, touch targets of at least 44 pixels, screen-reader status announcements, and reduced-motion behavior. Keep loading, empty, failure, and success states brief and actionable.
+
+Trip details, chart dialogs and timezone settings close through their close button, Escape or a click/tap on the backdrop, returning focus to the opener. Clicks inside the dialog (including padding) and drags that start inside do not dismiss it. Keep timezone settings open while their change is being applied. Fullscreen mobile charts have no visible backdrop, so use Escape or the close button there.

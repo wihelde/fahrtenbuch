@@ -3,6 +3,7 @@ import { TripCorrections } from "./TripCorrections";
 import { TripMap } from "./TripMap";
 import { tripDetailSchema, type TripDetail as Detail } from "./model";
 import { createTripClock } from "./trip-clock";
+import { useBackdropDismiss } from "./useBackdropDismiss";
 
 const number = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 8 });
 const date = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: "UTC" });
@@ -20,6 +21,7 @@ export function TripDetail({
   timeZone?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropDismiss();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -93,7 +95,7 @@ export function TripDetail({
       ]
     : [];
   return (
-    <dialog ref={dialog} className="trip-dialog" aria-labelledby="detail-title">
+    <dialog ref={dialog} className="trip-dialog" aria-labelledby="detail-title" {...backdrop}>
       <header className="detail-header">
         <div>
           <p className="context">Fahrtdetails</p>

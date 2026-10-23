@@ -1,5 +1,6 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { timeZoneSchema } from "./model";
+import { useBackdropDismiss } from "./useBackdropDismiss";
 
 /** Keep the display preference in this browser, independent of imported data. */
 export function readTimeZone() {
@@ -21,10 +22,19 @@ export function TimeControl({
   onChange: (timeZone?: string) => Promise<boolean>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
   const [utc, setUtc] = useState(Boolean(timeZone));
   const [zone, setZone] = useState(timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [restoreFocus, setRestoreFocus] = useState(false);
+  const backdrop = useBackdropDismiss(saving);
+  useEffect(() => {
+    // Wait until applying the timezone has re-enabled the opener.
+    if (!restoreFocus || disabled || saving) return;
+    opener.current?.focus({ preventScroll: true });
+    setRestoreFocus(false);
+  }, [restoreFocus, disabled, saving]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
@@ -53,6 +63,7 @@ export function TimeControl({
   return (
     <>
       <button
+        ref={opener}
         type="button"
         className="theme-control"
         aria-label="Zeitzone einstellen"
@@ -83,6 +94,8 @@ export function TimeControl({
         ref={dialog}
         className="trip-dialog time-dialog"
         aria-labelledby="time-title"
+        {...backdrop}
+        onClose={() => setRestoreFocus(true)}
         onCancel={(event) => {
           if (saving) event.preventDefault();
         }}

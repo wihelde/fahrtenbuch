@@ -4,6 +4,7 @@ import { consumptionNote } from "./Summary";
 import { ChartTooltip, type TooltipData } from "./ChartTooltip";
 import { OdometerChart } from "./OdometerChart";
 import { bucketRange, type DateRange } from "./periods";
+import { useBackdropDismiss } from "./useBackdropDismiss";
 
 const decimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 const money = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -52,6 +53,7 @@ export function Developments({
   const scope = `${selectionScope}:${daily}`;
   const plots = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropDismiss();
   const opener = useRef<HTMLElement | null>(null);
   const [expanded, setExpanded] = useState<Measure | null>(null);
   const expandedOpen = expanded !== null;
@@ -340,6 +342,11 @@ export function Developments({
           ref={dialog}
           className="chart-dialog"
           aria-labelledby="chart-dialog-title"
+          {...backdrop}
+          onClose={() => {
+            setTooltip(null);
+            setExpanded(null);
+          }}
           onCancel={(event) => {
             event.preventDefault();
             setTooltip(null);

@@ -63,7 +63,7 @@ Users can explicitly interpret all export clock times as UTC and choose a displa
 
 - Start with browser-local today and a start date 30 days earlier, with inclusive boundaries. Provide recent-day, calendar-month/year, and whole-archive presets.
 - Combine date, category, missing consumption/cost, and proximity filters across the list and every summary/chart.
-- Apply valid filter changes immediately, including manual date boundaries, map points and radius changes, without an apply button. Keep controls usable while loading; only the latest selection may update the results. Invalid date ranges show an error and keep the previous results until corrected.
+- Apply valid filter changes immediately, including manual date boundaries, map points and radius changes, without an apply button. Keep controls usable while loading; only the latest selection may update the results. Invalid date ranges show an error and keep the previous results until corrected. After a filter request fails, retry the currently selected filters rather than the last successfully applied selection.
 - A proximity match needs a start or destination inside a positive radius; a missing destination does not prevent start matching. It does not search route geometry.
 - Sort all eight list columns in either direction across the full selection before displaying pages of at most 50 rows. Place missing values last and reset pagination when selection or sorting changes.
 - Show original source, imported values, effective values, and corrections in trip details.
@@ -90,6 +90,8 @@ Skip missing destinations and likely round trips: identical endpoints, or endpoi
 ## Interface and operation
 
 Use responsive desktop/mobile layouts, semantic controls, keyboard access, visible focus, accessible status messages, and reduced motion. Offer System/Light/Dark appearance with live system tracking and persistent explicit preference. Follow [the design guide](../DESIGN.md).
+
+Close trip details, expanded charts and timezone dialogs using their close button, Escape or a backdrop click/tap. Restore focus to the opener and release chart scroll locking on every close path. Do not dismiss on dialog padding or on drags from inside to outside. Preserve the timezone dialog's dismissal guard while applying its change. A fullscreen mobile chart has no backdrop to click.
 
 Use Bun, React/Vite, SQLite, and one Docker container. Keep logs useful without recording CSV contents or coordinates. Document configuration and full-directory backups, restores, version changes, and rollback. The application does not schedule backups.
 

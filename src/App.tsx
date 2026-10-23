@@ -187,7 +187,7 @@ export function App() {
   });
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retry?: "filters" } | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [draggingFile, setDraggingFile] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -235,7 +235,7 @@ export function App() {
         Math.min(current, Math.max(0, Math.ceil(visible.length / pageSize) - 1)),
       );
     } catch {
-      setError("Das Archiv ist gerade nicht erreichbar. Bitte erneut versuchen.");
+      setError({ message: "Das Archiv ist gerade nicht erreichbar. Bitte erneut versuchen." });
     } finally {
       setLoading(false);
     }
@@ -288,13 +288,14 @@ export function App() {
       setPage(0);
       if (!("token" in saved)) await reload();
     } catch (cause) {
-      setError(
-        cause instanceof TypeError
-          ? "Der Server ist nicht erreichbar. Bitte erneut versuchen."
-          : cause instanceof Error
-            ? cause.message
-            : "Der Import konnte nicht abgeschlossen werden.",
-      );
+      setError({
+        message:
+          cause instanceof TypeError
+            ? "Der Server ist nicht erreichbar. Bitte erneut versuchen."
+            : cause instanceof Error
+              ? cause.message
+              : "Der Import konnte nicht abgeschlossen werden.",
+      });
     } finally {
       setUploading(false);
     }
@@ -317,9 +318,12 @@ export function App() {
       setPage(0);
       await reload();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Die Änderungen konnten nicht übernommen werden.",
-      );
+      setError({
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Die Änderungen konnten nicht übernommen werden.",
+      });
     } finally {
       setUploading(false);
     }
@@ -364,13 +368,15 @@ export function App() {
       setPage(0);
     } catch (cause) {
       if (request !== filterRequest.current) return;
-      setError(
-        cause instanceof z.ZodError
-          ? cause.issues[0]!.message
-          : cause instanceof Error
-            ? cause.message
-            : "Die Auswahl konnte nicht geladen werden.",
-      );
+      setError({
+        retry: "filters",
+        message:
+          cause instanceof z.ZodError
+            ? cause.issues[0]!.message
+            : cause instanceof Error
+              ? cause.message
+              : "Die Auswahl konnte nicht geladen werden.",
+      });
     } finally {
       if (request === filterRequest.current) setFilterLoading(false);
     }
@@ -529,13 +535,13 @@ export function App() {
         {error && (
           <div className="notice error" role="alert">
             <div>
-              <strong>{error}</strong>
+              <strong>{error.message}</strong>
               <p>Deine bereits gespeicherten Fahrten bleiben erhalten.</p>
             </div>
             <button
               className="button secondary"
               type="button"
-              onClick={() => void reload()}
+              onClick={() => void (error.retry === "filters" ? applyFilters() : reload())}
               disabled={uploading}
             >
               Erneut laden

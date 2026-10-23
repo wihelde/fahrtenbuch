@@ -22,11 +22,11 @@ Conversion treats the export date as the local departure date in the chosen time
 
 The initial range ends on today in your browser and starts 30 days earlier. Both dates are inclusive, so this covers 31 calendar dates. Presets include the last 7 or 90 days, this month or year to date, the full previous month or year, and the whole archive.
 
-Date presets, category, missing-value filters, and comparison choices apply immediately. Apply manually entered date boundaries with **Anwenden**.
+All valid filter changes apply immediately, including manually entered date boundaries. Invalid date ranges show an error and keep the previous results until corrected. If loading fails, **Erneut laden** retries the currently selected filters.
 
 Under **Angaben**, choose **Fehlende Angaben** for trips missing consumption or cost, **Verbrauch fehlt** for consumption only, or **Kosten fehlen** for cost only. Zero is an existing value. A trip leaves the selection when its effective values no longer match the filter.
 
-The optional location search matches a start or destination inside a selected radius; it cannot find places passed along a route. Tap the map or move it with arrow keys and press Enter to select its center. Set a positive radius and apply the location filter. A missing destination still allows a match by start. Removing the point and applying removes the location filter; **Zurücksetzen** clears all filters.
+The optional location search matches a start or destination inside a selected radius; it cannot find places passed along a route. Tap the map or move it with arrow keys and press Enter to select its center. Selecting a point or changing its positive radius applies immediately. A missing destination still allows a match by start. Removing the point immediately removes the location filter; **Zurücksetzen** clears all filters.
 
 Click a table heading to sort ascending or descending. Sorting covers all matching trips before pagination; missing values always come last. On mobile, use **Sortieren nach** and the direction selector. The list contains up to 50 trips per page; summaries and charts include every matching trip.
 
@@ -42,7 +42,7 @@ The consumption suggestion is `cost ÷ fuel price ÷ distance × 100`. The cost 
 
 Consumption is weighted by distance for trips with an effective consumption value. The coverage text tells you what proportion of selected distance contributes to that average. Missing values are not zero, and readable outliers remain in the calculation until corrected. Available costs contribute even when consumption is missing.
 
-Switch **Monatlich** or **Täglich** under **Entwicklungen**. Periods without trips are omitted. The newest period is selected initially. Clicking a bar selects that period in all three measures; hovering or focusing shows exact values without changing the selection. Missing values use hatching. Expand the accessible data table for exact period totals.
+Switch **Monatlich** or **Täglich** under **Entwicklungen**. Periods without trips are omitted. The newest period's values are shown initially. Clicking a bar selects that period in all three measures and restricts the trip list to that day or month. The heading above the list shows the selected period and **Im Diagramm ausgewählt**. The top filters, summaries, and chart overview stay unchanged, so you can select another bar. **Alle Fahrten im Zeitraum anzeigen** clears this additional restriction. Changing a base filter, timezone, or chart granularity also clears it. Hovering or focusing shows exact values without filtering the trip list. Missing values use hatching. Expand the accessible data table for exact period totals.
 
 The expand icon opens a chart in a wide dialog, or fullscreen on mobile. Switch measures without losing the selected period. Use the slider or arrow keys to reach thin bars; Escape closes the dialog and returns focus to its opener.
 
