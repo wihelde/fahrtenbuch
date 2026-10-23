@@ -23,6 +23,14 @@ export function addDays(date: string, days: number) {
   return value.toISOString().slice(0, 10);
 }
 
+/** Chart buckets select a whole calendar day or month, including leap days. */
+export function bucketRange(key: string): DateRange {
+  if (key.length === 10) return { from: key, to: key };
+  const end = new Date(`${key}-01T12:00:00Z`);
+  end.setUTCMonth(end.getUTCMonth() + 1, 0);
+  return { from: `${key}-01`, to: end.toISOString().slice(0, 10) };
+}
+
 /** February 29 uses February 28 in years without that calendar date. */
 export function shiftYear(date: string, years: number) {
   const value = new Date(`${date}T12:00:00Z`);

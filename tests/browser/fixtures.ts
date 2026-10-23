@@ -115,8 +115,7 @@ export async function importCsv(page: Page, content = csv) {
 
 export async function showAllTrips(page: Page) {
   await page.getByRole("combobox", { name: /^Zeitraum/ }).selectOption("all");
-  await expect(page.getByRole("region", { name: "Alle Fahrten", exact: true })).toHaveAttribute(
-    "aria-busy",
-    "false",
-  );
+  await expect(
+    page.getByRole("region", { name: "Fahrten im gewählten Zeitraum", exact: true }),
+  ).toHaveAttribute("aria-busy", "false");
 }

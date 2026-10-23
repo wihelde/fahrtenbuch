@@ -25,6 +25,8 @@ Keep the three summary charts side by side when space permits. Fit bars to the a
 
 Select the newest period initially. Clicking a bar selects the same period across all three measures. Hover and keyboard focus show exact values without changing the selection. Missing values use hatching and labels instead of appearing as zero.
 
+Explicit period selection by bar, arrow keys or slider narrows only the trip table to that day or calendar month, within the active filters. Keep the date fields, period summaries and chart overview unchanged so other bars remain available. Above the table, show the selected day or month, "Im Diagramm ausgewählt", and "Alle Fahrten im Zeitraum anzeigen" to clear the extra selection. Changing filters, timezone or daily/monthly view clears it; changing measures and opening trip details preserve it. All filters apply on change without an apply button. Keep filter controls usable while loading and announce the pending update in the filter status.
+
 An expand action opens one measure in a wide native dialog, using the full screen on small devices. Measure changes preserve the selected period. Keep daily/monthly views, comparisons, and a selection slider available. Escape closes the dialog and focus returns to its opener; render chart tooltips inside the dialog's top layer.
 
 For odometer readings, display date, start time, and value together. Include an intermediate scale and a keyboard-accessible slider for precise observation selection.

@@ -3,6 +3,7 @@ import type { Analysis, SummaryAnalysis } from "./model";
 import { consumptionNote } from "./Summary";
 import { ChartTooltip, type TooltipData } from "./ChartTooltip";
 import { OdometerChart } from "./OdometerChart";
+import { bucketRange, type DateRange } from "./periods";
 
 const decimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 const money = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -34,16 +35,19 @@ const sourceLabel = (bucket: Bucket) =>
     ? dateLabel(bucket.sourceFrom!)
     : `${dateLabel(bucket.sourceFrom!)} bis ${dateLabel(bucket.sourceTo!)}`;
 
-/** Selection is shared by all measures and resets to the newest bucket for each scope. */
+/** Share explicit table selection across all measures without narrowing the overview. */
 export function Developments({
   analysis,
   selectionScope,
+  selectedPeriod,
+  onSelectPeriod,
 }: {
   analysis: Analysis;
   selectionScope: string;
+  selectedPeriod: DateRange | null;
+  onSelectPeriod: (range: DateRange | null) => void;
 }) {
   const [daily, setDaily] = useState(false);
-  const [selection, setSelection] = useState<{ scope: string; key: string } | null>(null);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const scope = `${selectionScope}:${daily}`;
   const plots = useRef<HTMLDivElement>(null);
@@ -64,8 +68,12 @@ export function Developments({
   const currentByKey = new Map(current.map((bucket) => [bucket.key, bucket]));
   const priorByKey = new Map(prior.map((bucket) => [bucket.key, bucket]));
   const keys = [...new Set([...currentByKey.keys(), ...priorByKey.keys()])].sort();
-  const selectedKey =
-    selection?.scope === scope && keys.includes(selection.key) ? selection.key : keys.at(-1);
+  const selectedKey = selectedPeriod
+    ? daily
+      ? selectedPeriod.from
+      : selectedPeriod.from.slice(0, 7)
+    : keys.at(-1);
+  const navigableKey = selectedKey && keys.includes(selectedKey) ? selectedKey : keys.at(-1);
   const selected = selectedKey ? currentByKey.get(selectedKey) : undefined;
   const selectedPrior = selectedKey ? priorByKey.get(selectedKey) : undefined;
   const label = (key: string) => (daily ? dateLabel(key) : monthLabel(key));
@@ -135,6 +143,17 @@ export function Developments({
   }, []);
 
   const observations = analysis.odometer;
+
+  function selectPeriod(key: string) {
+    onSelectPeriod(bucketRange(key));
+  }
+
+  function changeGranularity(next: boolean) {
+    if (next === daily) return;
+    setTooltip(null);
+    setDaily(next);
+    onSelectPeriod(null);
+  }
 
   // Both views use the same values, selection and interactions.
   function renderPlot(chart: (typeof charts)[number], enlarged = false) {
@@ -232,8 +251,8 @@ export function Developments({
                 type="button"
                 className="month-bar"
                 aria-pressed={selectedKey === key}
-                onClick={() => setSelection({ scope, key })}
-                tabIndex={selectedKey === key ? 0 : -1}
+                onClick={() => selectPeriod(key)}
+                tabIndex={navigableKey === key ? 0 : -1}
                 onKeyDown={(event) => {
                   const next =
                     event.key === "ArrowLeft"
@@ -247,7 +266,7 @@ export function Developments({
                             : undefined;
                   if (next === undefined) return;
                   event.preventDefault();
-                  setSelection({ scope, key: keys[next]! });
+                  selectPeriod(keys[next]!);
                   const button = event.currentTarget.parentElement?.children[next];
                   if (button instanceof HTMLElement) button.focus({ preventScroll: true });
                 }}
@@ -367,24 +386,10 @@ export function Developments({
               ))}
             </div>
             <div className="chart-granularity" role="group" aria-label="Diagrammansicht">
-              <button
-                type="button"
-                aria-pressed={!daily}
-                onClick={() => {
-                  setTooltip(null);
-                  setDaily(false);
-                }}
-              >
+              <button type="button" aria-pressed={!daily} onClick={() => changeGranularity(false)}>
                 Monatlich
               </button>
-              <button
-                type="button"
-                aria-pressed={daily}
-                onClick={() => {
-                  setTooltip(null);
-                  setDaily(true);
-                }}
-              >
+              <button type="button" aria-pressed={daily} onClick={() => changeGranularity(true)}>
                 Täglich
               </button>
             </div>
@@ -406,12 +411,12 @@ export function Developments({
                 type="range"
                 min={0}
                 max={keys.length - 1}
-                value={selectedKey ? keys.indexOf(selectedKey) : 0}
+                value={navigableKey ? keys.indexOf(navigableKey) : 0}
                 aria-label="Zeitpunkt im Diagramm auswählen"
-                aria-valuetext={selectedKey ? label(selectedKey) : ""}
+                aria-valuetext={navigableKey ? label(navigableKey) : ""}
                 onChange={(event) => {
                   setTooltip(null);
-                  setSelection({ scope, key: keys[Number(event.target.value)]! });
+                  selectPeriod(keys[Number(event.target.value)]!);
                 }}
               />
             </label>
@@ -425,10 +430,10 @@ export function Developments({
       <div className="developments-heading">
         <h2 id="developments-title">Entwicklungen</h2>
         <div className="chart-granularity" role="group" aria-label="Diagrammansicht">
-          <button type="button" aria-pressed={!daily} onClick={() => setDaily(false)}>
+          <button type="button" aria-pressed={!daily} onClick={() => changeGranularity(false)}>
             Monatlich
           </button>
-          <button type="button" aria-pressed={daily} onClick={() => setDaily(true)}>
+          <button type="button" aria-pressed={daily} onClick={() => changeGranularity(true)}>
             Täglich
           </button>
         </div>

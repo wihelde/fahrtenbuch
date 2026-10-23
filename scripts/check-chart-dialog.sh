@@ -36,6 +36,7 @@ browser eval "(() => {
 })()"
 browser focus '.chart-dialog input[type=range]'
 browser press Home
+browser wait --fn "document.querySelector('.trip-section').getAttribute('aria-busy') === 'false'"
 browser eval "window.chartSelectedPeriod = document.querySelector('.chart-dialog .chart-selection > span').textContent"
 browser click '.chart-dialog button[data-measure="cost"]'
 browser eval "(() => {
@@ -43,6 +44,9 @@ browser eval "(() => {
   if (dialog.querySelector('.chart-selection > span').textContent !== window.chartSelectedPeriod)
     throw new Error('Period lost when switching measure');
   if (!dialog.textContent.includes('Kraftstoffkosten')) throw new Error('Wrong measure');
+  const [from, to] = document.querySelectorAll('.trip-filters input[type=date]');
+  if (from.value || to.value) throw new Error('Slider changed the overview range');
+  if (!document.querySelector('.chart-filter-note')) throw new Error('Table does not identify its chart selection');
   return 'PASS: measure switch preserves period';
 })()"
 browser hover '.chart-dialog .month-bar[aria-pressed="true"]'
@@ -56,7 +60,7 @@ browser press End
 browser eval "(() => {
   const dialog = document.querySelector('.chart-dialog');
   const slider = dialog.querySelector('input[type=range]');
-  if (slider.value !== slider.max) throw new Error('Keyboard did not select newest period');
+  if (slider && slider.value !== slider.max) throw new Error('Keyboard did not select newest period');
   const selected = dialog.querySelector('.chart-selection > span').textContent;
   if ([...document.querySelectorAll('.monthly-plots .chart-selection > span')].some(s => s.textContent !== selected))
     throw new Error('Overview did not share modal selection');

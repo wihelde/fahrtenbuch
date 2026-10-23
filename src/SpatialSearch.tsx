@@ -10,14 +10,10 @@ export function SpatialSearch({
   value,
   initialPoint,
   onChange,
-  disabled,
-  applied,
 }: {
   value: Nearby | null;
   initialPoint: [number, number];
   onChange: (value: Nearby | null) => void;
-  disabled: boolean;
-  applied: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [radius, setRadius] = useState("5");
@@ -44,7 +40,6 @@ export function SpatialSearch({
                 min="0.01"
                 step="any"
                 required={Boolean(value)}
-                disabled={disabled}
                 value={radius}
                 onChange={(event) => {
                   setRadius(event.target.value);
@@ -54,27 +49,15 @@ export function SpatialSearch({
                 }}
               />
             </label>
-            <button
-              type="submit"
-              className="button primary"
-              disabled={disabled || (!value && !applied)}
-            >
-              Filter anwenden
-            </button>
             {value && (
-              <button
-                type="button"
-                className="text-button"
-                disabled={disabled}
-                onClick={() => onChange(null)}
-              >
+              <button type="button" className="text-button" onClick={() => onChange(null)}>
                 Punkt entfernen
               </button>
             )}
           </div>
           <p className="map-help" role="status">
             {value
-              ? `Punkt: ${coordinates.format(value.lat)}°, ${coordinates.format(value.lng)}°. Anwenden aktualisiert die Auswahl.`
+              ? `Punkt: ${coordinates.format(value.lat)}°, ${coordinates.format(value.lng)}°.`
               : "Wähle einen Punkt. Es zählen nur Start und Ziel, keine Durchfahrten."}
           </p>
         </>

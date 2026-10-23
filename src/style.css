@@ -375,6 +375,19 @@ input[type="file"]::file-selector-button {
   color: var(--muted);
   font-size: 0.75rem;
 }
+.chart-filter-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.chart-filter-note .text-button {
+  color: var(--primary-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .desktop-table {
   overflow-x: auto;
 }

@@ -8,7 +8,7 @@ The current scope is one user and one vehicle on a private network or VPN, used 
 
 - Preserve original files and imported values. Show missing and unusual data without silently cleaning it.
 - Separate imported values, user corrections, calculated suggestions, and reconstructed routes.
-- Apply the same selection and effective values to the trip list, summaries, and charts.
+- Apply the same filters and effective values to the trip list, summaries, and charts. Explicit chart period selections additionally narrow the trip list while preserving the overview.
 - Keep CSV import easy to find and research focused on concrete journeys and periods.
 - Use dense desktop tables and readable mobile trip rows, with immediate feedback and clear states.
 - Keep installation and persistence small: one application container with SQLite and an external data directory.

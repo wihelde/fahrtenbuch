@@ -20,7 +20,7 @@ import { Summary } from "./Summary";
 import { Developments } from "./Developments";
 import { ThemeControl } from "./ThemeControl";
 import { TimeControl, readTimeZone } from "./TimeControl";
-import { periodPresets, periodRange, type ComparisonMode } from "./periods";
+import { periodPresets, periodRange, type ComparisonMode, type DateRange } from "./periods";
 
 import { ImportChanges } from "./ImportChanges";
 
@@ -34,6 +34,11 @@ const money = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR
 const dateFormat = new Intl.DateTimeFormat("de-DE", {
   day: "2-digit",
   month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const monthFormat = new Intl.DateTimeFormat("de-DE", {
+  month: "long",
   year: "numeric",
   timeZone: "UTC",
 });
@@ -203,11 +208,14 @@ export function App() {
   const [filters, setFilters] = useState<TripFilters>(initialRange);
   const [filteredTrips, setFilteredTrips] = useState<Trip[] | null>(null);
   const [filterLoading, setFilterLoading] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<DateRange | null>(null);
   const [selectedTrip, setSelectedTrip] = useState<number | null>(null);
   const closeDetail = useCallback(() => setSelectedTrip(null), []);
   const fileInput = useRef<HTMLInputElement>(null);
+  const listTitle = useRef<HTMLHeadingElement>(null);
   const fileDragDepth = useRef(0);
   const firstLoad = useRef(true);
+  const filterRequest = useRef(0);
 
   async function reload() {
     setLoading(true);
@@ -219,8 +227,12 @@ export function App() {
       setFilteredTrips(filtering ? selection.trips : null);
       setAnalysis(selection.analysis);
       setArchive(loaded);
+      const visible = selection.trips.filter(
+        (trip) =>
+          !selectedPeriod || (trip.date >= selectedPeriod.from && trip.date <= selectedPeriod.to),
+      );
       setPage((current) =>
-        Math.min(current, Math.max(0, Math.ceil(selection.trips.length / pageSize) - 1)),
+        Math.min(current, Math.max(0, Math.ceil(visible.length / pageSize) - 1)),
       );
     } catch {
       setError("Das Archiv ist gerade nicht erreichbar. Bitte erneut versuchen.");
@@ -245,6 +257,7 @@ export function App() {
       setFilteredTrips(selection.trips);
       setAnalysis(selection.analysis);
       setTimeZone(next);
+      setSelectedPeriod(null);
       setPage(0);
       setError(null);
       return true;
@@ -313,51 +326,68 @@ export function App() {
   }
 
   async function applyFilters(
-    event?: FormEvent<HTMLFormElement>,
-    reset = false,
-    choice?: {
+    choice: {
       draft?: typeof filterDraft;
       preset?: string;
       comparison?: ComparisonMode | "";
-    },
+      spatial?: Nearby | null;
+    } = {},
+    reset = false,
   ) {
-    event?.preventDefault();
-    if (filterLoading) return;
+    const request = ++filterRequest.current;
+    const draft = reset
+      ? { from: "", to: "", category: "", missing: "" }
+      : (choice.draft ?? filterDraft);
+    const spatial = reset ? null : choice.spatial === undefined ? spatialDraft : choice.spatial;
+    setFilterDraft(draft);
+    setSpatialDraft(spatial);
+    if (reset) setPreset("all");
+    else if (choice.preset) setPreset(choice.preset);
     setFilterLoading(true);
     setError(null);
     try {
       const next = reset
         ? {}
         : filtersSchema.parse({
-            ...Object.fromEntries(
-              Object.entries(choice?.draft ?? filterDraft).filter(([, value]) => value),
-            ),
-            ...spatialDraft,
+            ...Object.fromEntries(Object.entries(draft).filter(([, value]) => value)),
+            ...spatial,
           });
-      const mode = !next.from || !next.to ? "" : (choice?.comparison ?? comparison);
+      const mode = !next.from || !next.to ? "" : (choice.comparison ?? comparison);
+      setComparison(mode);
       const filtered = await readSelection(next, mode, timeZone);
+      // An earlier request may finish after a newer filter selection.
+      if (request !== filterRequest.current) return;
       setFilteredTrips(filtered.trips);
       setAnalysis(filtered.analysis);
       setFilters(next);
-      setComparison(mode);
-      if (choice?.draft) setFilterDraft(choice.draft);
-      if (choice?.preset) setPreset(choice.preset);
+      setSelectedPeriod(null);
       setPage(0);
-      if (reset) {
-        setFilterDraft({ from: "", to: "", category: "", missing: "" });
-        setSpatialDraft(null);
-        setPreset("all");
-      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Die Auswahl konnte nicht geladen werden.");
+      if (request !== filterRequest.current) return;
+      setError(
+        cause instanceof z.ZodError
+          ? cause.issues[0]!.message
+          : cause instanceof Error
+            ? cause.message
+            : "Die Auswahl konnte nicht geladen werden.",
+      );
     } finally {
-      setFilterLoading(false);
+      if (request === filterRequest.current) setFilterLoading(false);
     }
   }
 
   const empty = archive.trips.length === 0;
   const activeFilters = Object.keys(filters).length > 0;
-  const trips = filteredTrips ?? archive.trips;
+  const periodTrips = filteredTrips ?? archive.trips;
+  const trips = selectedPeriod
+    ? periodTrips.filter(
+        (trip) => trip.date >= selectedPeriod.from && trip.date <= selectedPeriod.to,
+      )
+    : periodTrips;
+  function selectPeriod(range: DateRange | null) {
+    setSelectedPeriod(range);
+    setPage(0);
+  }
   // Sort the entire selection before pagination; absent values stay last in either direction.
   const sortedTrips = [...trips].sort((a, b) => {
     const left =
@@ -632,14 +662,13 @@ export function App() {
 
         {!empty && (
           <section className="trip-section" aria-labelledby="list-title" aria-busy={filterLoading}>
-            <form className="trip-filters" onSubmit={(event) => void applyFilters(event)}>
+            <form className="trip-filters" onSubmit={(event) => event.preventDefault()}>
               <label>
                 Zeitraum
                 <select
                   value={preset}
-                  disabled={filterLoading}
                   onChange={(event) =>
-                    void applyFilters(undefined, false, {
+                    void applyFilters({
                       draft: { ...filterDraft, ...periodRange(event.target.value) },
                       preset: event.target.value,
                     })
@@ -661,11 +690,12 @@ export function App() {
                   type="date"
                   value={filterDraft.from}
                   max={filterDraft.to || undefined}
-                  disabled={filterLoading}
-                  onChange={(event) => {
-                    setFilterDraft({ ...filterDraft, from: event.target.value });
-                    setPreset("custom");
-                  }}
+                  onChange={(event) =>
+                    void applyFilters({
+                      draft: { ...filterDraft, from: event.target.value },
+                      preset: "custom",
+                    })
+                  }
                 />
               </label>
               <label>
@@ -674,20 +704,20 @@ export function App() {
                   type="date"
                   value={filterDraft.to}
                   min={filterDraft.from || undefined}
-                  disabled={filterLoading}
-                  onChange={(event) => {
-                    setFilterDraft({ ...filterDraft, to: event.target.value });
-                    setPreset("custom");
-                  }}
+                  onChange={(event) =>
+                    void applyFilters({
+                      draft: { ...filterDraft, to: event.target.value },
+                      preset: "custom",
+                    })
+                  }
                 />
               </label>
               <label>
                 Kategorie
                 <select
                   value={filterDraft.category}
-                  disabled={filterLoading}
                   onChange={(event) =>
-                    void applyFilters(undefined, false, {
+                    void applyFilters({
                       draft: { ...filterDraft, category: event.target.value },
                     })
                   }
@@ -702,9 +732,8 @@ export function App() {
                 <select
                   name="missing"
                   value={filterDraft.missing}
-                  disabled={filterLoading}
                   onChange={(event) =>
-                    void applyFilters(undefined, false, {
+                    void applyFilters({
                       draft: { ...filterDraft, missing: event.target.value },
                     })
                   }
@@ -719,9 +748,9 @@ export function App() {
                 Vergleichen mit
                 <select
                   value={comparison}
-                  disabled={filterLoading || !filterDraft.from || !filterDraft.to}
+                  disabled={!filterDraft.from || !filterDraft.to}
                   onChange={(event) =>
-                    void applyFilters(undefined, false, {
+                    void applyFilters({
                       comparison: event.target.value as ComparisonMode | "",
                     })
                   }
@@ -731,14 +760,10 @@ export function App() {
                   <option value="year">Vorjahr</option>
                 </select>
               </label>
-              <button className="button primary" disabled={filterLoading} type="submit">
-                {filterLoading ? "Wird geladen…" : "Anwenden"}
-              </button>
               <button
                 className="text-button"
                 disabled={
-                  filterLoading ||
-                  (!activeFilters && !spatialDraft && !Object.values(filterDraft).some(Boolean))
+                  !activeFilters && !spatialDraft && !Object.values(filterDraft).some(Boolean)
                 }
                 type="button"
                 onClick={() => void applyFilters(undefined, true)}
@@ -748,14 +773,13 @@ export function App() {
               <SpatialSearch
                 value={spatialDraft}
                 initialPoint={[archive.trips[0]!.startLat, archive.trips[0]!.startLng]}
-                onChange={setSpatialDraft}
-                disabled={filterLoading}
-                applied={filters.radiusKm !== undefined}
+                onChange={(spatial) => void applyFilters({ spatial })}
               />
             </form>
             <p className="filter-status" role="status">
+              {filterLoading && "Wird geladen… · "}
               {activeFilters
-                ? `${numbers.format(trips.length)} Treffer · ${filters.from ? `ab ${dateFormat.format(date(filters.from))}` : "ohne Anfangsdatum"} · ${filters.to ? `bis ${dateFormat.format(date(filters.to))}` : "ohne Enddatum"} · ${filters.category ?? "alle Kategorien"}${filters.radiusKm !== undefined ? ` · Ortssuche: ${radiusFormat.format(filters.radiusKm)} km um ${filters.lat!.toFixed(5)}°, ${filters.lng!.toFixed(5)}° (Start oder Ziel)` : ""}`
+                ? `${numbers.format(periodTrips.length)} Treffer · ${filters.from ? `ab ${dateFormat.format(date(filters.from))}` : "ohne Anfangsdatum"} · ${filters.to ? `bis ${dateFormat.format(date(filters.to))}` : "ohne Enddatum"} · ${filters.category ?? "alle Kategorien"}${filters.radiusKm !== undefined ? ` · Ortssuche: ${radiusFormat.format(filters.radiusKm)} km um ${filters.lat!.toFixed(5)}°, ${filters.lng!.toFixed(5)}° (Start oder Ziel)` : ""}`
                 : "Alle Fahrten"}
               {filters.missing &&
                 ` · ${filters.missing === "consumption" ? "Verbrauch fehlt" : filters.missing === "cost" ? "Kosten fehlen" : "Verbrauch oder Kosten fehlen"}`}
@@ -772,11 +796,36 @@ export function App() {
                 <Developments
                   analysis={analysis}
                   selectionScope={JSON.stringify({ ...filters, timeZone })}
+                  selectedPeriod={selectedPeriod}
+                  onSelectPeriod={selectPeriod}
                 />
               </>
             )}
             <div className="list-heading">
-              <h2 id="list-title">{activeFilters ? "Ausgewählte Fahrten" : "Alle Fahrten"}</h2>
+              <div aria-live="polite">
+                <h2 id="list-title" ref={listTitle} tabIndex={-1}>
+                  {selectedPeriod
+                    ? selectedPeriod.from === selectedPeriod.to
+                      ? `Fahrten am ${dateFormat.format(date(selectedPeriod.from))}`
+                      : `Fahrten im ${monthFormat.format(date(selectedPeriod.from))}`
+                    : "Fahrten im gewählten Zeitraum"}
+                </h2>
+                {selectedPeriod && (
+                  <div className="chart-filter-note">
+                    <span>Im Diagramm ausgewählt</span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => {
+                        selectPeriod(null);
+                        listTitle.current?.focus({ preventScroll: true });
+                      }}
+                    >
+                      Alle Fahrten im Zeitraum anzeigen
+                    </button>
+                  </div>
+                )}
+              </div>
               <span className="desktop-sort-status">{sortLabel}</span>
               <div className="mobile-sorting">
                 <label>
@@ -807,14 +856,20 @@ export function App() {
             {trips.length === 0 && (
               <div className="filter-empty">
                 <h3>Keine Fahrten für diese Auswahl</h3>
-                <p>Ändere die Filter oder setze sie zurück.</p>
-                <button
-                  className="button secondary"
-                  onClick={() => void applyFilters(undefined, true)}
-                  disabled={filterLoading}
-                >
-                  Alle Fahrten ansehen
-                </button>
+                <p>
+                  {selectedPeriod
+                    ? "Wähle einen anderen Balken."
+                    : "Ändere die Filter oder setze sie zurück."}
+                </p>
+                {!selectedPeriod && (
+                  <button
+                    className="button secondary"
+                    onClick={() => void applyFilters(undefined, true)}
+                    disabled={filterLoading}
+                  >
+                    Alle Fahrten ansehen
+                  </button>
+                )}
               </div>
             )}
             {trips.length > 0 && (
