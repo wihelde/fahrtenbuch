@@ -32,6 +32,8 @@ The default binding allows access only from the Docker host. To make it reachabl
 
 All archive data lives in `./data`, outside the container. Keep this directory when updating or recreating the container.
 
+The Dockerfile also applies Debian security updates for APT and zlib to the pinned Bun base image. Host package updates do not update the container. To refresh these image packages, run `docker compose build --pull --no-cache`, then `docker compose up -d --no-build`.
+
 ## Data and maps
 
 Imported values are retained, including missing or unusual values. Corrections are stored separately. Average consumption is weighted by distance, with coverage shown for missing values. Calculated suggestions require explicit confirmation.
