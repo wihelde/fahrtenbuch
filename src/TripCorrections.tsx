@@ -24,8 +24,8 @@ function CorrectionField({
   const effective = detail.trip[field];
   const [value, setValue] = useState(String(effective ?? ""));
   useEffect(() => setValue(String(effective ?? "")), [effective]);
-  const entered = field === "category" ? value : value.trim() === "" ? null : Number(value);
-  const changed = entered !== effective;
+  const entered = field === "category" ? value.trim() : value.trim() === "" ? null : Number(value);
+  const changed = entered !== effective && (field !== "category" || entered !== "");
   const label = {
     category: "Kategorie",
     consumption: "Verbrauch (l/100 km)",
@@ -57,7 +57,7 @@ function CorrectionField({
       field === "category"
         ? {
             category: {
-              value: value === "Geschäftlich" ? ("Geschäftlich" as const) : ("Freizeit" as const),
+              value: value.trim(),
             },
           }
         : { [field]: { value: value.trim() === "" ? null : Number(value) } };
@@ -76,16 +76,15 @@ function CorrectionField({
         {correction !== null ? " · Manuell korrigiert" : " · Importwert wirksam"}
       </p>
       {field === "category" ? (
-        <select
+        <input
           id={`correction-${field}`}
           name={field}
+          type="text"
+          required
           value={value}
           disabled={saving !== null}
           onChange={(event) => setValue(event.target.value)}
-        >
-          <option>Freizeit</option>
-          <option>Geschäftlich</option>
-        </select>
+        />
       ) : (
         <input
           id={`correction-${field}`}

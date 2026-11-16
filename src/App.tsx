@@ -383,6 +383,13 @@ export function App() {
   }
 
   const empty = archive.trips.length === 0;
+  // Keep the selection available when its last trip changes category.
+  const categories = [
+    ...new Set([
+      ...archive.trips.map((trip) => trip.category),
+      ...(filterDraft.category ? [filterDraft.category] : []),
+    ]),
+  ].sort((a, b) => a.localeCompare(b, "de"));
   const activeFilters = Object.keys(filters).length > 0;
   const periodTrips = filteredTrips ?? archive.trips;
   const trips = selectedPeriod
@@ -729,8 +736,9 @@ export function App() {
                   }
                 >
                   <option value="">Alle Kategorien</option>
-                  <option>Freizeit</option>
-                  <option>Geschäftlich</option>
+                  {categories.map((category) => (
+                    <option key={category}>{category}</option>
+                  ))}
                 </select>
               </label>
               <label>

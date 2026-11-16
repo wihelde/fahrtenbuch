@@ -28,6 +28,7 @@ The current scope is one vehicle, one user, a German interface, and German MyPeu
 - Show changed imported values for known identities before accepting them. Keeping existing values can still add new trips. Keep corrections across accepted reimports.
 - Skip identical repeated rows within a file. Reject contradictory rows for the same identity and ambiguous existing identities without changing the archive.
 - Import valid rows from an otherwise structurally readable file; report invalid rows with line, field, and reason. Reject an unreadable schema or overall CSV structure.
+- Re-evaluate rejected rows on every upload; a corrected reimport adds previously skipped trips without duplicating known trips.
 - Report encoding, delimiter, new/unchanged/changed/applied counts, and row errors.
 - Confirmation previews last 15 minutes and become stale after an intervening archive change or server restart.
 - Store SQLite, original exports, corrections, and route cache together in one persistent local directory outside the application container.
@@ -49,7 +50,7 @@ Require these twelve column names in this order, including the two spaces in the
 | `Durchschn Verbrauch  (l/100km)` | A readable signed number, or empty. |
 | `Kraftstoffpreis (EUR/l)` | A nonnegative number in euros per liter. |
 | `Kosten  (EUR)` | A readable signed number in euros, or empty. |
-| `Kategorie` | `Freizeit` or `Geschäftlich`. |
+| `Kategorie` | Any nonempty category name. Surrounding whitespace is trimmed; spelling and case are preserved. Original strings remain unchanged. |
 
 Support UTF-8 with or without BOM, UTF-16 with BOM, semicolon/comma/tab delimiters, and correctly quoted fields. Decimal points are supported. Decimal commas and European thousands separators are interpreted only when the row's number format can be identified unambiguously; do not guess ambiguous values. Coordinates must be within geographic bounds.
 
@@ -63,6 +64,7 @@ Users can explicitly interpret all export clock times as UTC and choose a displa
 
 - Start with browser-local today and a start date 30 days earlier, with inclusive boundaries. Provide recent-day, calendar-month/year, and whole-archive presets.
 - Combine date, category, missing consumption/cost, and proximity filters across the list and every summary/chart.
+- Derive category filter choices from effective values across the whole archive. Allow any nonempty category name when correcting a trip.
 - Apply valid filter changes immediately, including manual date boundaries, map points and radius changes, without an apply button. Keep controls usable while loading; only the latest selection may update the results. Invalid date ranges show an error and keep the previous results until corrected. After a filter request fails, retry the currently selected filters rather than the last successfully applied selection.
 - A proximity match needs a start or destination inside a positive radius; a missing destination does not prevent start matching. It does not search route geometry.
 - Sort all eight list columns in either direction across the full selection before displaying pages of at most 50 rows. Place missing values last and reset pagination when selection or sorting changes.
@@ -101,4 +103,4 @@ Use public HTTP behavior with temporary SQLite archives for import, reimports, c
 
 ## Outside the current scope
 
-Other CSV schemas, multiple vehicles/users, authentication, actual GPS tracks, searching places passed along a route, geocoding, offline map archives, automatic data cleanup, arbitrary categories, full edit history, and automatic backups are not implemented. Date/time, distance, odometer, price, and coordinates are not manually editable; confirmed reimports can change non-identity imported fields. CI checks dependency updates but does not deploy the application.
+Other CSV schemas, multiple vehicles/users, authentication, actual GPS tracks, searching places passed along a route, geocoding, offline map archives, automatic data cleanup, full edit history, and automatic backups are not implemented. Date/time, distance, odometer, price, and coordinates are not manually editable; confirmed reimports can change non-identity imported fields. CI checks dependency updates but does not deploy the application.

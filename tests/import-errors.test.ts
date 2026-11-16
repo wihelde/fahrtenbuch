@@ -78,6 +78,74 @@ afterEach(async () => {
   await rm(directory, { recursive: true, force: true });
 });
 
+test.each(["Sonstiges", "Kinder zur Schule", " Urlaub & Familie "])(
+  "custom category %j is imported, filterable and can be corrected freely",
+  async (category) => {
+    const source = csv.replace(";Freizeit", `;${category}`);
+    const result = await upload(source).then((r) => r.json());
+    expect(result).toMatchObject({ newCount: 2, errorCount: 0 });
+    const response = await fetch(
+      `${base}/api/trips?category=${encodeURIComponent(category.trim())}`,
+    );
+    expect(response.status).toBe(200);
+    const { trips } = await response.json();
+    expect(trips).toMatchObject([{ category: category.trim() }]);
+    expect(trips).toHaveLength(1);
+    expect(await fetch(`${base}/api/trips/${trips[0].id}`).then((r) => r.json())).toMatchObject({
+      base: { category: category.trim() },
+      source: { values: { Kategorie: category } },
+    });
+    const correction = await fetch(`${base}/api/trips/${trips[0].id}/corrections`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: { value: " Eigene Kategorie " } }),
+    });
+    expect(correction.status).toBe(200);
+    expect(await correction.json()).toMatchObject({
+      trip: { category: "Eigene Kategorie" },
+      base: { category: category.trim() },
+    });
+    expect(
+      await fetch(`${base}/api/analysis?category=Eigene%20Kategorie`).then((r) => r.json()),
+    ).toMatchObject({ count: 1 });
+  },
+);
+
+test.each(["Freizeit", "freizeit", " Freizeit ", "Meine eigene Kategorie"])(
+  "reimporting a rejected category corrected to %j adds only the missing trip",
+  async (category) => {
+    const rejected = csv.replace(";Freizeit", ";   ");
+    expect(await upload(rejected).then((r) => r.json())).toMatchObject({
+      newCount: 1,
+      errorCount: 1,
+      errors: [
+        {
+          line: 2,
+          field: "Kategorie",
+          reason: "Kategorie darf nicht leer sein.",
+        },
+      ],
+    });
+    const corrected = rejected.replace(";   ", `;${category}`);
+    const result = await upload(corrected).then((r) => r.json());
+    expect(result).toMatchObject({ newCount: 1, unchangedCount: 1, errorCount: 0 });
+    const { trips } = await fetch(`${base}/api/trips`).then((r) => r.json());
+    expect(trips).toHaveLength(2);
+    expect(trips[1]).toMatchObject({ category: category.trim() });
+    expect(await fetch(`${base}/api/trips/${trips[1].id}`).then((r) => r.json())).toMatchObject({
+      source: { values: { Kategorie: category } },
+    });
+    expect(await fetch(`${base}/api/imports/${result.id}/file`).then((r) => r.text())).toBe(
+      corrected,
+    );
+    expect(await upload(corrected).then((r) => r.json())).toMatchObject({
+      newCount: 0,
+      unchangedCount: 2,
+      errorCount: 0,
+    });
+  },
+);
+
 test("a partially invalid export keeps valid trips and explains the rejected physical row", async () => {
   const broken =
     csv + "31.02.2025;08:00;09:00;1:00;52.0 , 13.0;52.1 , 13.1;20.0;14153;6.0;1.67;2.0;Freizeit\n";
@@ -195,7 +263,7 @@ test("signed European consumption and costs remain readable without guessing amb
 });
 
 test("row errors use starting physical line numbers and do not discard valid neighboring rows", async () => {
-  const multiline = csv.split("\n")[1].replace("Freizeit", '"Freizeit\n"');
+  const multiline = csv.split("\n")[1].replace("Freizeit", '" \n"');
   const short = "22.06.2025;08:00";
   const ambiguous = csv.split("\n")[1].replace(";0.3;", ";1,234;");
   const source = `${header}\n\n${multiline}\n${csv.split("\n")[2]}\n${short}\n${ambiguous}\n`;

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const categorySchema = z.string().trim().min(1);
+
 export const tripValuesSchema = z.object({
   date: z.iso.date(),
   startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
@@ -14,7 +16,7 @@ export const tripValuesSchema = z.object({
   consumption: z.number().nullable(),
   fuelPrice: z.number().nonnegative(),
   cost: z.number().nullable(),
-  category: z.enum(["Freizeit", "Geschäftlich"]),
+  category: categorySchema,
 });
 
 export const tripSchema = tripValuesSchema.extend({
@@ -54,7 +56,7 @@ export const filtersSchema = z
   .object({
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
-    category: z.enum(["Freizeit", "Geschäftlich"]).optional(),
+    category: categorySchema.optional(),
     missing: z.enum(["any", "consumption", "cost"]).optional(),
     timeZone: timeZoneSchema.optional(),
     lat: filterNumber.pipe(z.number().min(-90).max(90)).optional(),

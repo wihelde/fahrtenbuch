@@ -418,7 +418,10 @@ test("combined filters summarize every matching trip and respond to effective co
   expect(filtered.cost).toBeCloseTo(10.2, 12);
   expect((await fetch(`${base}/api/analysis?from=2025-02-30`)).status).toBe(400);
   expect((await fetch(`${base}/api/analysis?from=2025-06-02&to=2025-06-01`)).status).toBe(400);
-  expect((await fetch(`${base}/api/analysis?category=Other`)).status).toBe(400);
+  expect(await fetch(`${base}/api/analysis?category=Other`).then((r) => r.json())).toMatchObject({
+    count: 0,
+  });
+  expect((await fetch(`${base}/api/analysis?category=%20`)).status).toBe(400);
 });
 
 test("empty and zero-distance selections remain missing while actual zero values are preserved", async () => {

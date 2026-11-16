@@ -137,6 +137,51 @@ test("category and missing-value filters update the list and all summary values 
   await expect(trips).toHaveCount(3);
 });
 
+test("custom categories remain selectable across filters, corrections and reloads", async ({
+  page,
+}) => {
+  await importCsv(page, csv.replace(";Freizeit", ";Sonstiges"));
+  await expect(page.getByText("3 neue Fahrten · 0 Änderungen übernommen")).toBeVisible();
+  await showAllTrips(page);
+  const category = page.getByRole("combobox", { name: /^Kategorie/ });
+  const trips = page.getByRole("button", { name: /^Fahrt vom/ });
+  await category.selectOption("Sonstiges");
+  await expect(trips).toHaveCount(1);
+  await expect(category.locator("option")).toHaveText([
+    "Alle Kategorien",
+    "Freizeit",
+    "Geschäftlich",
+    "Sonstiges",
+  ]);
+  await trips.click();
+  const detail = page.getByRole("dialog", { name: "01.01.2024 · 08:00" });
+  const input = detail.getByLabel("Kategorie", { exact: true });
+  const save = detail.getByRole("button", { name: "Kategorie speichern", exact: true });
+  await expect(input).toHaveValue("Sonstiges");
+  await input.fill("   ");
+  await expect(save).toBeDisabled();
+  await input.fill(" Pendeln & Schule ");
+  await save.click();
+  await expect(detail.getByText("Gespeichert.", { exact: true })).toBeVisible();
+  await expect(input).toHaveValue("Pendeln & Schule");
+  await detail.getByRole("button", { name: "Schließen", exact: true }).click();
+  await expect(trips).toHaveCount(0);
+  await expect(category).toHaveValue("Sonstiges");
+  await category.selectOption("Pendeln & Schule");
+  await expect(trips).toHaveCount(1);
+  await expect(trips).toHaveAccessibleName("Fahrt vom 01.01.2024 um 08:00 ansehen");
+  await page.reload();
+  await showAllTrips(page);
+  await expect(category.locator("option")).toHaveText([
+    "Alle Kategorien",
+    "Freizeit",
+    "Geschäftlich",
+    "Pendeln & Schule",
+  ]);
+  await category.selectOption("Pendeln & Schule");
+  await expect(trips).toHaveCount(1);
+});
+
 test("retrying a failed filter change applies the visible selection to trips and summaries", async ({
   page,
 }) => {
@@ -240,7 +285,7 @@ test("chart selections narrow only the table, preserve all filters and let users
   ).toBeVisible();
   await expect(summary.locator("dd").first()).toHaveText("5");
   await trips.click();
-  await detail.getByLabel("Kategorie", { exact: true }).selectOption("Geschäftlich");
+  await detail.getByLabel("Kategorie", { exact: true }).fill("Geschäftlich");
   await detail.getByRole("button", { name: "Kategorie speichern", exact: true }).click();
   await expect(detail.getByText("Gespeichert.", { exact: true })).toBeVisible();
   await detail.getByRole("button", { name: "Schließen", exact: true }).click();

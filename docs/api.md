@@ -1,6 +1,6 @@
 # HTTP API
 
-The API is intended for the same private network or VPN as the interface. It has no authentication. Error messages and category values are German. Archive responses use `Cache-Control: no-store`.
+The API is intended for the same private network or VPN as the interface. It has no authentication. Error messages are German; category names are user-defined. Archive responses use `Cache-Control: no-store`.
 
 ## Read endpoints
 
@@ -22,7 +22,7 @@ Both trip and analysis endpoints accept:
 | Query parameter | Meaning |
 | --- | --- |
 | `from`, `to` | Inclusive departure-date boundaries in `YYYY-MM-DD` format, according to the selected display timezone or unchanged export date. Either can be omitted without comparison. |
-| `category` | `Freizeit` or `Geschäftlich`. |
+| `category` | Any nonempty category name; matches the effective value exactly, including case. Surrounding whitespace is trimmed. |
 | `missing` | `any`, `consumption`, or `cost`. Uses effective values; zero is present. |
 | `timeZone` | Optional IANA display timezone such as `Europe/Berlin`. Explicitly interprets exported times as UTC. Omit to retain unchanged export dates and times. Also accepted by `GET /api/trips/:id`. |
 | `lat`, `lng`, `radiusKm` | Proximity to start or destination. Provide all three together, with a positive radius in kilometers. |
@@ -75,7 +75,7 @@ Use `false` to keep existing imported values while adding new journeys. A stale,
 { "consumption": null }
 ```
 
-For consumption or cost, `{ "value": null }` explicitly overrides the effective value to missing; a top-level field value of `null` restores its imported value. Category values must be `Freizeit` or `Geschäftlich`. Unknown fields and invalid values return 400.
+For consumption or cost, `{ "value": null }` explicitly overrides the effective value to missing; a top-level field value of `null` restores its imported value. Category values accept any nonempty string, with surrounding whitespace trimmed and case preserved. Unknown fields and invalid values return 400.
 
 The trip detail returns `calculatedConsumption` and `calculatedCost` as unrounded suggestions, or `null` when prerequisites are missing. Invalid calculated adoption returns 400 without changing the archive. Corrections return the updated trip detail.
 

@@ -10,6 +10,8 @@ Identical journeys are skipped. If an export changes a known journey, review the
 
 For a partially invalid CSV, valid trips are imported and errors identify their source lines. An unreadable overall structure or conflicting duplicate trip identity rejects the import. The original export is archived without altering its bytes and can be downloaded under **Originaldateien**. A trip detail also identifies its source export.
 
+Category names are unrestricted and must not be empty. Surrounding whitespace is ignored; spelling and case are preserved. After correcting rejected rows, upload the CSV again to add the missing trips; already imported trips are skipped.
+
 Confirmation previews expire after 15 minutes and must be repeated after an intervening archive change or server restart.
 
 Use [the synthetic sample](../examples/demo-trips.csv) only in a separate demonstration archive. Importing your own export later does not remove previously imported sample trips.
@@ -24,6 +26,8 @@ The initial range ends on today in your browser and starts 30 days earlier. Both
 
 All valid filter changes apply immediately, including manually entered date boundaries. Invalid date ranges show an error and keep the previous results until corrected. If loading fails, **Erneut laden** retries the currently selected filters.
 
+**Kategorie** lists effective categories from the whole archive, including custom names and manual corrections, regardless of the other filters.
+
 Under **Angaben**, choose **Fehlende Angaben** for trips missing consumption or cost, **Verbrauch fehlt** for consumption only, or **Kosten fehlen** for cost only. Zero is an existing value. A trip leaves the selection when its effective values no longer match the filter.
 
 The optional location search matches a start or destination inside a selected radius; it cannot find places passed along a route. Tap the map or move it with arrow keys and press Enter to select its center. Selecting a point or changing its positive radius applies immediately. A missing destination still allows a match by start. Removing the point immediately removes the location filter; **Zurücksetzen** clears all filters.
@@ -33,6 +37,8 @@ Click a table heading to sort ascending or descending. Sorting covers all matchi
 ## Corrections and suggestions
 
 Open a journey to correct its category, consumption, or cost. Imported values remain separate and can be restored with **Importwert verwenden**.
+
+Enter any nonempty name in **Kategorie** and choose **Kategorie speichern** to use your own category.
 
 Manual consumption and cost edits have a save button beside their field. A calculated suggestion has its own **Übernehmen und speichern** button, which adopts and saves it in one action. Other draft values are preserved. Expand the calculation explanation to inspect its inputs.
 

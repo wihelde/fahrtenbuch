@@ -202,9 +202,11 @@ export function readTrips(bytes: Uint8Array) {
           reason:
             cause instanceof RowError
               ? cause.message
-              : cause instanceof z.ZodError && field === "date"
-                ? "Datum ist kein gültiger Kalendertag."
-                : "Angabe ist nicht gültig.",
+              : field === "category"
+                ? "Kategorie darf nicht leer sein."
+                : cause instanceof z.ZodError && field === "date"
+                  ? "Datum ist kein gültiger Kalendertag."
+                  : "Angabe ist nicht gültig.",
         });
         return [];
       }

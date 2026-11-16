@@ -206,7 +206,8 @@ test("foreign pages and invalid corrections cannot mutate an archived trip", asy
   expect((await correct(id, { consumption: { value: "-1" }, cost: { value: 4 } })).status).toBe(
     400,
   );
-  expect((await correct(id, { category: { value: "Other" } })).status).toBe(400);
+  expect((await correct(id, { category: { value: "  " } })).status).toBe(400);
+  expect((await correct(id, { category: { value: 42 } })).status).toBe(400);
   expect((await correct(id, { cost: { value: "5" } })).status).toBe(400);
   expect((await correct(id, { odometerKm: 1 })).status).toBe(400);
   expect((await correct(999999, { cost: { value: 4 } })).status).toBe(404);
