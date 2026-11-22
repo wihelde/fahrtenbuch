@@ -2,9 +2,10 @@ FROM oven/bun:1.4.4 AS base
 # Keep Debian security fixes when rebuilding the pinned Bun image.
 RUN sed -i 's|http://deb.debian.org/|https://deb.debian.org/|g' /etc/apt/sources.list.d/debian.sources \
  && apt-get update \
- && apt-get install -y --no-install-recommends --only-upgrade apt zlib1g \
+ && apt-get install -y --no-install-recommends --only-upgrade apt zlib1g libc6 libc-bin \
  && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge '3.0.4' \
  && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' zlib1g)" ge '1:1.3.dfsg+really1.3.1-1+deb13u1' \
+ && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libc6)" ge '2.41-12+deb13u5' \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
